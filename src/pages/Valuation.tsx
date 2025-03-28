@@ -1,12 +1,18 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { StepProgress } from '@/components/StepProgress';
-import { Check, X } from 'lucide-react';
+import { Check, X, Save } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
 
 export default function Valuation() {
   const [activeTab, setActiveTab] = useState('questionnaire');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -50,6 +56,83 @@ export default function Valuation() {
 }
 
 function QuestionnaireContent() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch questionnaire data
+  const { data: questionnaireData, isLoading: loadingQuestionnaire } = useQuery({
+    queryKey: ['questionnaire'],
+    queryFn: async () => {
+      const { data: questionnaires, error: questionnaireError } = await supabase
+        .from('questionnaires')
+        .select('*')
+        .limit(1)
+        .single();
+      
+      if (questionnaireError) {
+        toast({
+          title: "Error loading questionnaire",
+          description: questionnaireError.message,
+          variant: "destructive"
+        });
+        return null;
+      }
+      
+      const { data: questions, error: questionsError } = await supabase
+        .from('questionnaire_questions')
+        .select('*')
+        .eq('questionnaire_id', questionnaires.id)
+        .order('question_number');
+      
+      if (questionsError) {
+        toast({
+          title: "Error loading questions",
+          description: questionsError.message,
+          variant: "destructive"
+        });
+        return null;
+      }
+      
+      return {
+        questionnaire: questionnaires,
+        questions: questions
+      };
+    }
+  });
+  
+  // Save responses mutation
+  const saveResponsesMutation = useMutation({
+    mutationFn: async ({ questionId, response }: { questionId: string, response: string | number | boolean }) => {
+      const { data, error } = await supabase
+        .from('questionnaire_questions')
+        .update({ response: response.toString() })
+        .eq('id', questionId)
+        .select();
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questionnaire'] });
+      toast({
+        title: "Response saved",
+        description: "Your answer has been saved successfully."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error saving response",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle response changes and save
+  const handleResponseChange = (questionId: string, value: string | number | boolean) => {
+    saveResponsesMutation.mutate({ questionId, response: value });
+  };
+  
   const steps = [
     { number: 1, label: 'Team', isActive: true },
     { number: 2, label: 'Step 2' },
@@ -59,6 +142,14 @@ function QuestionnaireContent() {
     { number: 6, label: 'Step 6' },
     { number: 7, label: 'Step 7' },
   ];
+  
+  if (loadingQuestionnaire) {
+    return <div className="p-4 text-center">Loading questionnaire...</div>;
+  }
+  
+  if (!questionnaireData) {
+    return <div className="p-4 text-center">No questionnaire data available.</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -72,80 +163,17 @@ function QuestionnaireContent() {
       </div>
       
       <div className="space-y-6">
-        <QuestionItem 
-          number="1.1" 
-          question="How many founders does the company have?" 
-          input={<input type="number" defaultValue={5} className="w-full border border-border rounded-md p-2" />} 
-        />
-        
-        <QuestionItem 
-          number="1.2" 
-          question="How much did the founders invest in the company in terms of capital collectively so far?" 
-          input={
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-              <input type="number" defaultValue={0} className="w-full border border-border rounded-md p-2 pl-8" />
-            </div>
-          } 
-        />
-        
-        <QuestionItem 
-          number="1.3" 
-          question="Is the majority of the founders involved in other companies or occupations?" 
-          input={
-            <div className="flex space-x-4">
-              <label className="flex items-center">
-                <input type="radio" name="q3" className="h-4 w-4 text-primary border-border" />
-                <span className="ml-2">Yes</span>
-              </label>
-              <label className="flex items-center">
-                <input type="radio" name="q3" className="h-4 w-4 text-primary border-border" />
-                <span className="ml-2">No</span>
-              </label>
-            </div>
-          } 
-        />
-        
-        <QuestionItem 
-          number="1.4" 
-          question="What is the average age of the founders?" 
-          input={<input type="number" defaultValue={0} className="w-full border border-border rounded-md p-2" />} 
-        />
-        
-        <QuestionItem 
-          number="1.5" 
-          question="Has any of the founders previous entrepreneurial experience?" 
-          input={
-            <div className="flex space-x-4">
-              <label className="flex items-center">
-                <input type="radio" name="q5" className="h-4 w-4 text-primary border-border" />
-                <span className="ml-2">Yes</span>
-              </label>
-              <label className="flex items-center">
-                <input type="radio" name="q5" className="h-4 w-4 text-primary border-border" />
-                <span className="ml-2">No</span>
-              </label>
-            </div>
-          } 
-        />
-        
-        <QuestionItem 
-          number="1.6" 
-          question="How many employees work for the company? (excluding founders, interns and freelancers)" 
-          input={<input type="number" defaultValue={20} className="w-full border border-border rounded-md p-2" />} 
-        />
-        
-        <QuestionItem 
-          number="1.7" 
-          question="How long have the members of the core team worked (or studied) together?" 
-          input={<input type="number" defaultValue={0} className="w-full border border-border rounded-md p-2" />} 
-        />
-        
-        <QuestionItem 
-          number="1.8" 
-          question="How many years of relevant industry experience does the core team have collectively?" 
-          input={<input type="number" defaultValue={0} className="w-full border border-border rounded-md p-2" />} 
-        />
+        {questionnaireData.questions.map((question) => (
+          <QuestionItem 
+            key={question.id}
+            questionId={question.id}
+            number={question.question_number} 
+            question={question.question}
+            responseType={question.response_type}
+            currentResponse={question.response || ''}
+            onResponseChange={handleResponseChange}
+          />
+        ))}
       </div>
       
       <div className="flex justify-between pt-6">
@@ -157,12 +185,63 @@ function QuestionnaireContent() {
 }
 
 interface QuestionItemProps {
+  questionId: string;
   number: string;
   question: string;
-  input: React.ReactNode;
+  responseType: string;
+  currentResponse: string;
+  onResponseChange: (questionId: string, value: string | number | boolean) => void;
 }
 
-function QuestionItem({ number, question, input }: QuestionItemProps) {
+function QuestionItem({ questionId, number, question, responseType, currentResponse, onResponseChange }: QuestionItemProps) {
+  const renderInput = () => {
+    switch (responseType) {
+      case 'number':
+        return (
+          <Input 
+            type="number" 
+            value={currentResponse || '0'} 
+            onChange={(e) => onResponseChange(questionId, e.target.value)} 
+            className="w-full border border-border rounded-md p-2"
+          />
+        );
+      case 'boolean':
+        return (
+          <div className="flex space-x-4">
+            <label className="flex items-center">
+              <input 
+                type="radio" 
+                name={`q-${questionId}`} 
+                className="h-4 w-4 text-primary border-border" 
+                checked={currentResponse === 'true'} 
+                onChange={() => onResponseChange(questionId, true)} 
+              />
+              <span className="ml-2">Yes</span>
+            </label>
+            <label className="flex items-center">
+              <input 
+                type="radio" 
+                name={`q-${questionId}`} 
+                className="h-4 w-4 text-primary border-border" 
+                checked={currentResponse === 'false'} 
+                onChange={() => onResponseChange(questionId, false)} 
+              />
+              <span className="ml-2">No</span>
+            </label>
+          </div>
+        );
+      default:
+        return (
+          <Input 
+            type="text" 
+            value={currentResponse || ''} 
+            onChange={(e) => onResponseChange(questionId, e.target.value)} 
+            className="w-full border border-border rounded-md p-2" 
+          />
+        );
+    }
+  };
+
   return (
     <div className="flex gap-6">
       <div className="w-14 h-14 flex-shrink-0 rounded-full bg-secondary text-primary flex items-center justify-center font-medium">
@@ -170,7 +249,7 @@ function QuestionItem({ number, question, input }: QuestionItemProps) {
       </div>
       <div className="flex-1">
         <h3 className="font-medium mb-2">{question}</h3>
-        {input}
+        {renderInput()}
       </div>
     </div>
   );
@@ -178,6 +257,87 @@ function QuestionItem({ number, question, input }: QuestionItemProps) {
 
 function ValuationContent() {
   const [rangeValue, setRangeValue] = useState(54);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Fetch valuation and company data
+  const { data, isLoading } = useQuery({
+    queryKey: ['valuation'],
+    queryFn: async () => {
+      const { data: valuations, error: valuationError } = await supabase
+        .from('valuations')
+        .select('*, companies(*)')
+        .limit(1)
+        .single();
+        
+      if (valuationError) {
+        toast({
+          title: "Error loading valuation",
+          description: valuationError.message,
+          variant: "destructive"
+        });
+        return null;
+      }
+      
+      return valuations;
+    }
+  });
+  
+  // Update valuation mutation
+  const updateValuationMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: string, value: number }) => {
+      const { data, error } = await supabase
+        .from('valuations')
+        .update({ selected_valuation: value * 1000 })
+        .eq('id', id)
+        .select();
+        
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['valuation'] });
+      toast({
+        title: "Valuation updated",
+        description: "The valuation has been updated successfully."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating valuation",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle range value change
+  const handleRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value) / 1000;
+    setRangeValue(value);
+  };
+  
+  // Save selected valuation
+  const saveSelectedValuation = () => {
+    if (data) {
+      updateValuationMutation.mutate({ id: data.id, value: rangeValue });
+    }
+  };
+  
+  // Initialize range value from data
+  useEffect(() => {
+    if (data && data.selected_valuation) {
+      setRangeValue(Math.round(data.selected_valuation / 1000));
+    }
+  }, [data]);
+  
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading valuation data...</div>;
+  }
+  
+  if (!data) {
+    return <div className="p-4 text-center">No valuation data available.</div>;
+  }
   
   return (
     <div className="space-y-8">
@@ -192,27 +352,27 @@ function ValuationContent() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             <div>
               <span className="text-primary text-sm font-medium">Started in</span>
-              <p>2025</p>
+              <p>{data.companies.founded_year}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Employees</span>
-              <p>20</p>
+              <p>{data.companies.total_employees}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Industry</span>
-              <p>Business Support Services</p>
+              <p>{data.companies.industry}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Business Activity</span>
-              <p>Legal Services</p>
+              <p>{data.companies.business_activity}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Last Revenue</span>
-              <p>$1000</p>
+              <p>${data.companies.last_revenue}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Stage</span>
-              <p>Growth</p>
+              <p>{data.companies.stage}</p>
             </div>
           </div>
         </Card>
@@ -223,7 +383,7 @@ function ValuationContent() {
           <div className="space-y-3">
             <div>
               <p className="font-medium">Initial Estimate</p>
-              <p className="text-xl font-bold">$61,000</p>
+              <p className="text-xl font-bold">${data.initial_estimate}</p>
             </div>
             
             <div className="flex justify-between items-center">
@@ -245,17 +405,17 @@ function ValuationContent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Pre-Money Valuation</h3>
-            <p className="text-2xl font-bold">$0</p>
+            <p className="text-2xl font-bold">${data.pre_money_valuation}</p>
           </Card>
           
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Investment</h3>
-            <p className="text-2xl font-bold">$0</p>
+            <p className="text-2xl font-bold">${data.investment}</p>
           </Card>
           
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Post-Money Valuation</h3>
-            <p className="text-2xl font-bold">$0</p>
+            <p className="text-2xl font-bold">${data.post_money_valuation}</p>
           </Card>
         </div>
         
@@ -263,27 +423,38 @@ function ValuationContent() {
           <div className="flex justify-between mb-4">
             <div>
               <span className="text-sm text-muted-foreground">Low</span>
-              <p className="font-medium">$44,000.00</p>
+              <p className="font-medium">${data.valuation_min.toFixed(2)}</p>
             </div>
             <div className="text-right">
               <span className="text-sm text-muted-foreground">High</span>
-              <p className="font-medium">$64,000.00</p>
+              <p className="font-medium">${data.valuation_max.toFixed(2)}</p>
             </div>
           </div>
           
           <input
             type="range"
-            min="44000"
-            max="64000"
+            min={data.valuation_min}
+            max={data.valuation_max}
             step="1000"
             value={rangeValue * 1000}
-            onChange={(e) => setRangeValue(Number(e.target.value) / 1000)}
+            onChange={handleRangeChange}
             className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer"
           />
           
           <div className="text-center mt-4">
             <span className="text-sm text-muted-foreground">Selected</span>
             <p className="font-bold text-lg">${rangeValue},000.00</p>
+          </div>
+          
+          <div className="mt-4 flex justify-end">
+            <Button 
+              variant="primary" 
+              iconRight={<Save size={16} />} 
+              onClick={saveSelectedValuation}
+              isLoading={updateValuationMutation.isPending}
+            >
+              Save Valuation
+            </Button>
           </div>
         </Card>
       </div>
@@ -295,19 +466,19 @@ function ValuationContent() {
           <div className="space-y-3">
             <div>
               <span className="text-primary text-sm font-medium">Funds Raised</span>
-              <p>$0</p>
+              <p>${data.funds_raised}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Last Year EBITDA</span>
-              <p>$0</p>
+              <p>${data.last_year_ebitda}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Industry Multiple</span>
-              <p>8.067476</p>
+              <p>{data.industry_multiple}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Annual ROI</span>
-              <p>3.2%</p>
+              <p>{data.annual_roi}%</p>
             </div>
           </div>
         </Card>
@@ -317,6 +488,19 @@ function ValuationContent() {
 }
 
 function HistoryContent() {
+  const { data: valuationHistory, isLoading } = useQuery({
+    queryKey: ['valuation-history'],
+    queryFn: async () => {
+      // This is a placeholder for future implementation of valuation history
+      // We would fetch historical valuation data from the database here
+      return [];
+    }
+  });
+  
+  if (isLoading) {
+    return <div className="p-4 text-center">Loading history...</div>;
+  }
+  
   return (
     <div className="p-6 text-center animate-fade-in">
       <h2 className="text-xl font-medium mb-2">Valuation History</h2>

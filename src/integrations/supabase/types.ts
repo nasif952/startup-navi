@@ -9,7 +9,189 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      companies: {
+        Row: {
+          business_activity: string | null
+          created_at: string | null
+          founded_year: number | null
+          id: string
+          industry: string | null
+          last_revenue: number | null
+          name: string
+          stage: string | null
+          total_employees: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_activity?: string | null
+          created_at?: string | null
+          founded_year?: number | null
+          id?: string
+          industry?: string | null
+          last_revenue?: number | null
+          name?: string
+          stage?: string | null
+          total_employees?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_activity?: string | null
+          created_at?: string | null
+          founded_year?: number | null
+          id?: string
+          industry?: string | null
+          last_revenue?: number | null
+          name?: string
+          stage?: string | null
+          total_employees?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      questionnaire_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          question: string
+          question_number: string
+          questionnaire_id: string | null
+          response: string | null
+          response_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          question: string
+          question_number: string
+          questionnaire_id?: string | null
+          response?: string | null
+          response_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          question?: string
+          question_number?: string
+          questionnaire_id?: string | null
+          response?: string | null
+          response_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_questions_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaires: {
+        Row: {
+          created_at: string | null
+          id: string
+          status: string | null
+          step: string
+          step_number: number
+          title: string
+          updated_at: string | null
+          valuation_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          step: string
+          step_number: number
+          title: string
+          updated_at?: string | null
+          valuation_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          step?: string
+          step_number?: number
+          title?: string
+          updated_at?: string | null
+          valuation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaires_valuation_id_fkey"
+            columns: ["valuation_id"]
+            isOneToOne: false
+            referencedRelation: "valuations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      valuations: {
+        Row: {
+          annual_roi: number | null
+          company_id: string | null
+          created_at: string | null
+          funds_raised: number | null
+          id: string
+          industry_multiple: number | null
+          initial_estimate: number | null
+          investment: number | null
+          last_year_ebitda: number | null
+          post_money_valuation: number | null
+          pre_money_valuation: number | null
+          selected_valuation: number | null
+          updated_at: string | null
+          valuation_max: number | null
+          valuation_min: number | null
+        }
+        Insert: {
+          annual_roi?: number | null
+          company_id?: string | null
+          created_at?: string | null
+          funds_raised?: number | null
+          id?: string
+          industry_multiple?: number | null
+          initial_estimate?: number | null
+          investment?: number | null
+          last_year_ebitda?: number | null
+          post_money_valuation?: number | null
+          pre_money_valuation?: number | null
+          selected_valuation?: number | null
+          updated_at?: string | null
+          valuation_max?: number | null
+          valuation_min?: number | null
+        }
+        Update: {
+          annual_roi?: number | null
+          company_id?: string | null
+          created_at?: string | null
+          funds_raised?: number | null
+          id?: string
+          industry_multiple?: number | null
+          initial_estimate?: number | null
+          investment?: number | null
+          last_year_ebitda?: number | null
+          post_money_valuation?: number | null
+          pre_money_valuation?: number | null
+          selected_valuation?: number | null
+          updated_at?: string | null
+          valuation_max?: number | null
+          valuation_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "valuations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
