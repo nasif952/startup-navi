@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +16,12 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent
+} from "@/components/ui/tabs";
 
 export default function Valuation() {
   const [activeTab, setActiveTab] = useState('questionnaire');
@@ -30,47 +35,56 @@ export default function Valuation() {
         <Button variant="primary" className="bg-white text-destructive hover:bg-white/90">Upgrade Now</Button>
       </div>
 
-      <div className="flex border-b border-border mb-6">
-        <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'questionnaire' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('questionnaire')}
-        >
-          Questionnaire
-        </button>
-        <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'valuation' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('valuation')}
-        >
-          Valuation
-        </button>
-        <button
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'history' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setActiveTab('history')}
-        >
-          History
-        </button>
-      </div>
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
+        <TabsList className="w-full max-w-md mb-6 bg-background border-b border-border rounded-none p-0">
+          <TabsTrigger 
+            value="questionnaire" 
+            className={`px-6 py-3 rounded-none ${activeTab === 'questionnaire' ? 'border-b-2 border-primary' : ''}`}
+          >
+            Questionnaire
+          </TabsTrigger>
+          <TabsTrigger 
+            value="valuation" 
+            className={`px-6 py-3 rounded-none ${activeTab === 'valuation' ? 'border-b-2 border-primary' : ''}`}
+          >
+            Valuation
+          </TabsTrigger>
+          <TabsTrigger 
+            value="history" 
+            className={`px-6 py-3 rounded-none ${activeTab === 'history' ? 'border-b-2 border-primary' : ''}`}
+          >
+            History
+          </TabsTrigger>
+        </TabsList>
 
-      {activeTab === 'questionnaire' && <QuestionnaireContent />}
-      {activeTab === 'valuation' && <ValuationContent />}
-      {activeTab === 'history' && <HistoryContent />}
+        <TabsContent value="questionnaire">
+          <QuestionnaireContent setActiveTab={setActiveTab} />
+        </TabsContent>
+        <TabsContent value="valuation">
+          <ValuationContent />
+        </TabsContent>
+        <TabsContent value="history">
+          <HistoryContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
-function QuestionnaireContent() {
+interface QuestionnaireContentProps {
+  setActiveTab: (tab: string) => void;
+}
+
+function QuestionnaireContent({ setActiveTab }: QuestionnaireContentProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Fetch questionnaire data
   const { data: questionnaireData, isLoading: loadingQuestionnaire } = useQuery({
     queryKey: ['questionnaire'],
     queryFn: async () => {
@@ -111,7 +125,6 @@ function QuestionnaireContent() {
     }
   });
   
-  // Save responses mutation
   const saveResponsesMutation = useMutation({
     mutationFn: async ({ questionId, response }: { questionId: string, response: string | number | boolean }) => {
       const { data, error } = await supabase
@@ -135,13 +148,10 @@ function QuestionnaireContent() {
     }
   });
   
-  // Save questionnaire status and progress to next step
   const saveAndNextMutation = useMutation({
     mutationFn: async () => {
-      // Check if all questions have responses
       const allQuestionsAnswered = questionnaireData?.questions.every(q => q.response && q.response !== '');
       
-      // Update questionnaire status
       const { data, error } = await supabase
         .from('questionnaires')
         .update({ 
@@ -152,7 +162,6 @@ function QuestionnaireContent() {
         
       if (error) throw error;
       
-      // Get or create next questionnaire if needed
       const nextStepNumber = currentStep + 1;
       const nextStepTitle = getStepTitle(nextStepNumber);
       
@@ -188,7 +197,6 @@ function QuestionnaireContent() {
         title: "Progress saved",
         description: "Your answers have been saved successfully."
       });
-      // Move to next step or to valuation tab if all steps are complete
       if (currentStep < 7) {
         setCurrentStep(currentStep + 1);
       } else {
@@ -206,18 +214,15 @@ function QuestionnaireContent() {
     }
   });
   
-  // Handle response changes and save
   const handleResponseChange = (questionId: string, value: string | number | boolean) => {
     saveResponsesMutation.mutate({ questionId, response: value });
   };
   
-  // Handle save and next button
   const handleSaveAndNext = () => {
     setIsSaving(true);
     saveAndNextMutation.mutate();
   };
   
-  // Helper function to get step title
   const getStepTitle = (stepNumber: number) => {
     const stepTitles = [
       'Team', 'Product', 'Market', 'Business Model', 'Competition', 'Financials', 'Future'
@@ -225,7 +230,6 @@ function QuestionnaireContent() {
     return stepTitles[stepNumber - 1] || null;
   };
   
-  // Build steps array for the progress component
   const steps = Array.from({ length: 7 }, (_, i) => {
     const stepNumber = i + 1;
     return { 
@@ -236,7 +240,6 @@ function QuestionnaireContent() {
   });
   
   useEffect(() => {
-    // If questionnaire data is loaded, update the current step
     if (questionnaireData?.questionnaire) {
       setCurrentStep(questionnaireData.questionnaire.step_number);
     }
@@ -373,7 +376,6 @@ function ValuationContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch valuation and company data
   const { data, isLoading } = useQuery({
     queryKey: ['valuation'],
     queryFn: async () => {
@@ -396,7 +398,6 @@ function ValuationContent() {
     }
   });
   
-  // Update valuation mutation
   const updateValuationMutation = useMutation({
     mutationFn: async ({ id, value }: { id: string, value: number }) => {
       const { data, error } = await supabase
@@ -424,20 +425,17 @@ function ValuationContent() {
     }
   });
   
-  // Handle range value change
   const handleRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value) / 1000;
     setRangeValue(value);
   };
   
-  // Save selected valuation
   const saveSelectedValuation = () => {
     if (data) {
       updateValuationMutation.mutate({ id: data.id, value: rangeValue });
     }
   };
   
-  // Initialize range value from data
   useEffect(() => {
     if (data && data.selected_valuation) {
       setRangeValue(Math.round(data.selected_valuation / 1000));
@@ -604,8 +602,6 @@ function HistoryContent() {
   const { data: valuationHistory, isLoading } = useQuery({
     queryKey: ['valuation-history'],
     queryFn: async () => {
-      // This is a placeholder for future implementation of valuation history
-      // We would fetch historical valuation data from the database here
       return [];
     }
   });
