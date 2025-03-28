@@ -1,17 +1,20 @@
 
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { DataTable } from '@/components/DataTable';
 import { Eye, FileUp, Plus, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const performanceHistory = [
-  { month: '2', year: '2025', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
-  { month: '1', year: '2025', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
-  { month: '12', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
-  { month: '11', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
-  { month: '10', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
-  { month: '9', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
+  { id: '1', month: '2', year: '2025', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
+  { id: '2', month: '1', year: '2025', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
+  { id: '3', month: '12', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
+  { id: '4', month: '11', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
+  { id: '5', month: '10', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
+  { id: '6', month: '9', year: '2024', createdOn: '27 Mar 2025', updatedOn: '27 Mar 2025', status: false },
 ];
 
 export default function Performance() {
@@ -60,13 +63,74 @@ export default function Performance() {
 }
 
 function DefaultMetricsTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedMonth, setSelectedMonth] = useState('March');
+  const [selectedYear, setSelectedYear] = useState('2025');
+  const [metrics, setMetrics] = useState([
+    { id: '1', name: 'Revenue', target: '', actual: '', unit: '$' },
+    { id: '2', name: 'Gross Margin', target: '', actual: '', unit: '%' },
+    { id: '3', name: 'Cash on Hand', target: '', actual: '', unit: '$' },
+    { id: '4', name: 'No. of Paying Customers', target: '', actual: '', unit: '#' },
+  ]);
+
+  const handleInputChange = (metricId, field, value) => {
+    setMetrics(metrics.map(metric => 
+      metric.id === metricId ? { ...metric, [field]: value } : metric
+    ));
+  };
+
+  const saveMetricsMutation = useMutation({
+    mutationFn: async () => {
+      // For demonstration, we'll log the data that would be saved
+      console.log('Saving metrics:', { month: selectedMonth, year: selectedYear, metrics });
+      
+      // Mock successful API call
+      return new Promise(resolve => setTimeout(resolve, 500));
+    },
+    onSuccess: () => {
+      toast({
+        title: "Performance metrics saved",
+        description: `Metrics for ${selectedMonth} ${selectedYear} have been updated.`
+      });
+      
+      // Refresh any relevant query data
+      queryClient.invalidateQueries({ queryKey: ['performance-metrics'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to save metrics",
+        description: error.message || "An error occurred while saving the metrics",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSaveMetrics = () => {
+    saveMetricsMutation.mutate();
+  };
+
+  const handleAddMetric = () => {
+    toast({
+      title: "Add Metric",
+      description: "This functionality will allow you to add a custom metric to your default list."
+    });
+  };
+
+  const handleBulkUpload = () => {
+    toast({
+      title: "Bulk Upload",
+      description: "This functionality will allow you to upload multiple metrics at once."
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">My Default Metrics</h2>
         <div className="flex space-x-2">
-          <Button variant="primary" size="sm" iconLeft={<Plus size={16} />}>Add Metric</Button>
-          <Button variant="outline" size="sm" iconLeft={<FileUp size={16} />}>Bulk Upload</Button>
+          <Button variant="primary" size="sm" iconLeft={<Plus size={16} />} onClick={handleAddMetric}>Add Metric</Button>
+          <Button variant="outline" size="sm" iconLeft={<FileUp size={16} />} onClick={handleBulkUpload}>Bulk Upload</Button>
         </div>
       </div>
       
@@ -74,7 +138,11 @@ function DefaultMetricsTab() {
         <div className="flex justify-end space-x-4 mb-4">
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Month</label>
-            <select className="w-36 rounded-md border border-border p-2">
+            <select
+              className="w-36 rounded-md border border-border p-2"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
               <option>March</option>
               <option>February</option>
               <option>January</option>
@@ -82,7 +150,11 @@ function DefaultMetricsTab() {
           </div>
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Year</label>
-            <select className="w-36 rounded-md border border-border p-2">
+            <select
+              className="w-36 rounded-md border border-border p-2"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
               <option>2025</option>
               <option>2024</option>
             </select>
@@ -99,75 +171,45 @@ function DefaultMetricsTab() {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-border">
-              <td className="py-3 px-4">1</td>
-              <td className="py-3 px-4">Revenue</td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-            </tr>
-            <tr className="border-b border-border">
-              <td className="py-3 px-4">2</td>
-              <td className="py-3 px-4">Gross Margin</td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-            </tr>
-            <tr className="border-b border-border">
-              <td className="py-3 px-4">3</td>
-              <td className="py-3 px-4">Cash on Hand</td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td className="py-3 px-4">4</td>
-              <td className="py-3 px-4">No. of Paying Customers</td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">#</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-              <td className="py-3 px-4">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">#</span>
-                  <input type="text" className="w-full border border-border rounded-md p-2 pl-8" />
-                </div>
-              </td>
-            </tr>
+            {metrics.map((metric, index) => (
+              <tr key={metric.id} className={index < metrics.length - 1 ? "border-b border-border" : ""}>
+                <td className="py-3 px-4">{index + 1}</td>
+                <td className="py-3 px-4">{metric.name}</td>
+                <td className="py-3 px-4">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{metric.unit}</span>
+                    <input 
+                      type="text" 
+                      className="w-full border border-border rounded-md p-2 pl-8" 
+                      value={metric.target}
+                      onChange={(e) => handleInputChange(metric.id, 'target', e.target.value)}
+                    />
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">{metric.unit}</span>
+                    <input 
+                      type="text" 
+                      className="w-full border border-border rounded-md p-2 pl-8" 
+                      value={metric.actual}
+                      onChange={(e) => handleInputChange(metric.id, 'actual', e.target.value)}
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
         
         <div className="flex justify-end mt-6">
-          <Button variant="primary">Save</Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSaveMetrics}
+            isLoading={saveMetricsMutation.isPending}
+          >
+            Save
+          </Button>
         </div>
       </Card>
     </div>
@@ -176,6 +218,14 @@ function DefaultMetricsTab() {
 
 function PerformanceTab() {
   const [activePerformanceTab, setActivePerformanceTab] = useState('selectMetrics');
+  const { toast } = useToast();
+  
+  const handleViewDetails = (recordId) => {
+    toast({
+      title: "View Performance Record",
+      description: `Viewing details for record ID: ${recordId}`
+    });
+  };
   
   return (
     <div className="space-y-6">
@@ -240,8 +290,11 @@ function PerformanceTab() {
               { 
                 key: 'view', 
                 header: 'View',
-                render: () => (
-                  <button className="text-primary hover:text-primary/80">
+                render: (_, row) => (
+                  <button 
+                    className="text-primary hover:text-primary/80"
+                    onClick={() => handleViewDetails(row.id)}
+                  >
                     <Eye size={18} />
                   </button>
                 ) 
@@ -257,12 +310,28 @@ function PerformanceTab() {
 }
 
 function CustomMetricsTab() {
+  const { toast } = useToast();
+  
+  const handleAddCustomMetric = () => {
+    toast({
+      title: "Add Custom Metric",
+      description: "This functionality will allow you to create a new custom metric"
+    });
+  };
+  
   return (
     <div className="space-y-8">
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">Core Metrics</h2>
-          <Button variant="primary" size="sm" iconLeft={<Plus size={16} />}>Add Custom Metric</Button>
+          <Button 
+            variant="primary" 
+            size="sm" 
+            iconLeft={<Plus size={16} />}
+            onClick={handleAddCustomMetric}
+          >
+            Add Custom Metric
+          </Button>
         </div>
         
         <div className="mt-6">
