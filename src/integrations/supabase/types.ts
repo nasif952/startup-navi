@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      business_model: {
+        Row: {
+          company_id: string | null
+          content: string | null
+          created_at: string | null
+          id: string
+          section: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          section: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          section?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_model_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           business_activity: string | null
@@ -47,6 +82,304 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      esops: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          total_shares: number
+          updated_at: string | null
+          vesting_period: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          total_shares: number
+          updated_at?: string | null
+          vesting_period?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          total_shares?: number
+          updated_at?: string | null
+          vesting_period?: string | null
+        }
+        Relationships: []
+      }
+      files: {
+        Row: {
+          created_at: string | null
+          file_size: string | null
+          file_type: string | null
+          folder_id: string | null
+          id: string
+          name: string
+          owner: string
+          storage_path: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_size?: string | null
+          file_type?: string | null
+          folder_id?: string | null
+          id?: string
+          name: string
+          owner: string
+          storage_path: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_size?: string | null
+          file_type?: string | null
+          folder_id?: string | null
+          id?: string
+          name?: string
+          owner?: string
+          storage_path?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          owner: string
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          owner: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          owner?: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funding_rounds: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          id: string
+          is_foundation: boolean | null
+          name: string
+          updated_at: string | null
+          valuation: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          is_foundation?: boolean | null
+          name: string
+          updated_at?: string | null
+          valuation?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          id?: string
+          is_foundation?: boolean | null
+          name?: string
+          updated_at?: string | null
+          valuation?: number | null
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          capital_invested: number
+          created_at: string | null
+          id: string
+          number_of_shares: number
+          round_id: string | null
+          share_class_id: string | null
+          share_price: number
+          shareholder_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          capital_invested: number
+          created_at?: string | null
+          id?: string
+          number_of_shares: number
+          round_id?: string | null
+          share_class_id?: string | null
+          share_price: number
+          shareholder_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          capital_invested?: number
+          created_at?: string | null
+          id?: string
+          number_of_shares?: number
+          round_id?: string | null
+          share_class_id?: string | null
+          share_price?: number
+          shareholder_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investments_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "funding_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_share_class_id_fkey"
+            columns: ["share_class_id"]
+            isOneToOne: false
+            referencedRelation: "share_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_shareholder_id_fkey"
+            columns: ["shareholder_id"]
+            isOneToOne: false
+            referencedRelation: "shareholders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          interest_rate: number | null
+          name: string
+          term_months: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          interest_rate?: number | null
+          name: string
+          term_months?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          interest_rate?: number | null
+          name?: string
+          term_months?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_custom: boolean | null
+          is_default: boolean | null
+          name: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_custom?: boolean | null
+          is_default?: boolean | null
+          name: string
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_custom?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      performance_values: {
+        Row: {
+          actual: number | null
+          created_at: string | null
+          id: string
+          metric_id: string | null
+          month: number
+          target: number | null
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          actual?: number | null
+          created_at?: string | null
+          id?: string
+          metric_id?: string | null
+          month: number
+          target?: number | null
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          actual?: number | null
+          created_at?: string | null
+          id?: string
+          metric_id?: string | null
+          month?: number
+          target?: number | null
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_values_metric_id_fkey"
+            columns: ["metric_id"]
+            isOneToOne: false
+            referencedRelation: "performance_metrics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       questionnaire_questions: {
         Row: {
@@ -129,6 +462,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      share_classes: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          rights: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          rights?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          rights?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shareholders: {
+        Row: {
+          contact: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       valuations: {
         Row: {

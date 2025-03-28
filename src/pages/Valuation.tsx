@@ -5,9 +5,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
 import { StepProgress } from '@/components/StepProgress';
-import { Check, X, Save } from 'lucide-react';
+import { Check, X, Save, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function Valuation() {
   const [activeTab, setActiveTab] = useState('questionnaire');
@@ -58,6 +67,8 @@ export default function Valuation() {
 function QuestionnaireContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Fetch questionnaire data
   const { data: questionnaireData, isLoading: loadingQuestionnaire } = useQuery({
@@ -114,10 +125,6 @@ function QuestionnaireContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['questionnaire'] });
-      toast({
-        title: "Response saved",
-        description: "Your answer has been saved successfully."
-      });
     },
     onError: (error) => {
       toast({
@@ -128,20 +135,112 @@ function QuestionnaireContent() {
     }
   });
   
+  // Save questionnaire status and progress to next step
+  const saveAndNextMutation = useMutation({
+    mutationFn: async () => {
+      // Check if all questions have responses
+      const allQuestionsAnswered = questionnaireData?.questions.every(q => q.response && q.response !== '');
+      
+      // Update questionnaire status
+      const { data, error } = await supabase
+        .from('questionnaires')
+        .update({ 
+          status: allQuestionsAnswered ? 'complete' : 'incomplete' 
+        })
+        .eq('id', questionnaireData?.questionnaire.id)
+        .select();
+        
+      if (error) throw error;
+      
+      // Get or create next questionnaire if needed
+      const nextStepNumber = currentStep + 1;
+      const nextStepTitle = getStepTitle(nextStepNumber);
+      
+      if (nextStepTitle) {
+        const { data: existingStep, error: checkError } = await supabase
+          .from('questionnaires')
+          .select('*')
+          .eq('step_number', nextStepNumber)
+          .limit(1);
+          
+        if (checkError) throw checkError;
+        
+        if (!existingStep || existingStep.length === 0) {
+          const { error: createError } = await supabase
+            .from('questionnaires')
+            .insert({
+              valuation_id: questionnaireData?.questionnaire.valuation_id,
+              step: nextStepTitle.toLowerCase().replace(/\s+/g, '_'),
+              step_number: nextStepNumber,
+              title: nextStepTitle,
+              status: 'incomplete'
+            });
+            
+          if (createError) throw createError;
+        }
+      }
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questionnaire'] });
+      toast({
+        title: "Progress saved",
+        description: "Your answers have been saved successfully."
+      });
+      // Move to next step or to valuation tab if all steps are complete
+      if (currentStep < 7) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        setActiveTab('valuation');
+      }
+      setIsSaving(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error saving progress",
+        description: error.message,
+        variant: "destructive"
+      });
+      setIsSaving(false);
+    }
+  });
+  
   // Handle response changes and save
   const handleResponseChange = (questionId: string, value: string | number | boolean) => {
     saveResponsesMutation.mutate({ questionId, response: value });
   };
   
-  const steps = [
-    { number: 1, label: 'Team', isActive: true },
-    { number: 2, label: 'Step 2' },
-    { number: 3, label: 'Step 3' },
-    { number: 4, label: 'Step 4' },
-    { number: 5, label: 'Step 5' },
-    { number: 6, label: 'Step 6' },
-    { number: 7, label: 'Step 7' },
-  ];
+  // Handle save and next button
+  const handleSaveAndNext = () => {
+    setIsSaving(true);
+    saveAndNextMutation.mutate();
+  };
+  
+  // Helper function to get step title
+  const getStepTitle = (stepNumber: number) => {
+    const stepTitles = [
+      'Team', 'Product', 'Market', 'Business Model', 'Competition', 'Financials', 'Future'
+    ];
+    return stepTitles[stepNumber - 1] || null;
+  };
+  
+  // Build steps array for the progress component
+  const steps = Array.from({ length: 7 }, (_, i) => {
+    const stepNumber = i + 1;
+    return { 
+      number: stepNumber, 
+      label: getStepTitle(stepNumber) || `Step ${stepNumber}`,
+      isActive: stepNumber === currentStep
+    };
+  });
+  
+  useEffect(() => {
+    // If questionnaire data is loaded, update the current step
+    if (questionnaireData?.questionnaire) {
+      setCurrentStep(questionnaireData.questionnaire.step_number);
+    }
+  }, [questionnaireData]);
   
   if (loadingQuestionnaire) {
     return <div className="p-4 text-center">Loading questionnaire...</div>;
@@ -157,9 +256,11 @@ function QuestionnaireContent() {
         <h1 className="text-2xl font-bold mb-2">Questionnaire Progress</h1>
         <p className="text-muted-foreground mb-6">Attract investors with an optimized Valuation! Let's continue →</p>
         
-        <StepProgress steps={steps} currentStep={1} className="mb-8" />
+        <StepProgress steps={steps} currentStep={currentStep} className="mb-8" />
         
-        <h2 className="text-xl font-semibold mb-6 border-b border-border pb-3">Step 1: Team</h2>
+        <h2 className="text-xl font-semibold mb-6 border-b border-border pb-3">
+          Step {currentStep}: {getStepTitle(currentStep)}
+        </h2>
       </div>
       
       <div className="space-y-6">
@@ -177,8 +278,20 @@ function QuestionnaireContent() {
       </div>
       
       <div className="flex justify-between pt-6">
-        <Button variant="outline">Back</Button>
-        <Button>Save and Next</Button>
+        <Button 
+          variant="outline"
+          disabled={currentStep === 1 || isSaving}
+          onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+        >
+          Back
+        </Button>
+        <Button 
+          onClick={handleSaveAndNext}
+          isLoading={isSaving}
+          iconRight={<ChevronRight size={16} />}
+        >
+          Save and Next
+        </Button>
       </div>
     </div>
   );
