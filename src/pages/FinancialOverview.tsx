@@ -26,6 +26,7 @@ interface ValuationData {
   id: string;
   selected_valuation: number | null;
   annual_roi: number | null;
+  investment: number | null; // Added the missing investment property
   companies: {
     name: string;
     industry: string;
