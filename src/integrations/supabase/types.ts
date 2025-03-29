@@ -272,6 +272,13 @@ export type Database = {
             foreignKeyName: "investments_shareholder_id_fkey"
             columns: ["shareholder_id"]
             isOneToOne: false
+            referencedRelation: "shareholder_investments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investments_shareholder_id_fkey"
+            columns: ["shareholder_id"]
+            isOneToOne: false
             referencedRelation: "shareholders"
             referencedColumns: ["id"]
           },
@@ -463,27 +470,68 @@ export type Database = {
           },
         ]
       }
-      share_classes: {
+      round_summaries: {
         Row: {
           created_at: string | null
           id: string
-          name: string
-          rights: string | null
+          round_id: string | null
+          total_capital: number
+          total_shares: number
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
-          name: string
-          rights?: string | null
+          round_id?: string | null
+          total_capital?: number
+          total_shares?: number
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
-          name?: string
+          round_id?: string | null
+          total_capital?: number
+          total_shares?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_summaries_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "funding_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_classes: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          preferred_dividend: number | null
+          rights: string | null
+          updated_at: string | null
+          voting_rights: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          preferred_dividend?: number | null
           rights?: string | null
           updated_at?: string | null
+          voting_rights?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          preferred_dividend?: number | null
+          rights?: string | null
+          updated_at?: string | null
+          voting_rights?: boolean | null
         }
         Relationships: []
       }
@@ -575,7 +623,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      shareholder_investments: {
+        Row: {
+          contact: string | null
+          id: string | null
+          name: string | null
+          total_invested: number | null
+          total_investments: number | null
+          total_shares: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
