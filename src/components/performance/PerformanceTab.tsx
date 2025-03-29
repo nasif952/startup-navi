@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/Card';
@@ -22,8 +21,29 @@ const fetchPerformanceHistory = async () => {
   ];
 };
 
+// Define types for our chart data
+type MetricData = {
+  month: string;
+  value: number;
+};
+
+type SingleMetric = {
+  id: string;
+  name: string;
+  data: MetricData[];
+};
+
+type CombinedDataPoint = {
+  month: string;
+  revenue: number;
+  margin: number;
+  customers: number;
+};
+
+type ChartData = SingleMetric[] | CombinedDataPoint[];
+
 // Mock data for charts
-const generateMetricData = (tab: string) => {
+const generateMetricData = (tab: string): ChartData => {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
   
   if (tab === 'selectMetrics') {
@@ -56,6 +76,11 @@ const generateMetricData = (tab: string) => {
     ];
   }
 };
+
+// Type guard to check if data is in SingleMetric format
+function isMetricDataArray(data: ChartData): data is SingleMetric[] {
+  return data.length > 0 && 'name' in data[0] && 'data' in data[0];
+}
 
 export function PerformanceTab() {
   const [activePerformanceTab, setActivePerformanceTab] = useState('selectMetrics');
@@ -126,17 +151,18 @@ export function PerformanceTab() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                {chartData
-                  .filter(metric => selectedMetrics.includes(metric.name))
-                  .map((metric, index) => (
-                    <Line 
-                      key={metric.id}
-                      data={metric.data} 
-                      dataKey="value" 
-                      name={metric.name}
-                      stroke={index === 0 ? "#8884d8" : "#82ca9d"}
-                    />
-                  ))
+                {isMetricDataArray(chartData) && 
+                  chartData
+                    .filter(metric => selectedMetrics.includes(metric.name))
+                    .map((metric, index) => (
+                      <Line 
+                        key={metric.id}
+                        data={metric.data} 
+                        dataKey="value" 
+                        name={metric.name}
+                        stroke={index === 0 ? "#8884d8" : "#82ca9d"}
+                      />
+                    ))
                 }
               </LineChart>
             </ResponsiveContainer>
