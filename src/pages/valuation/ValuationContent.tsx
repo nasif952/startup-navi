@@ -4,15 +4,43 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/Card';
 import { Button } from '@/components/Button';
-import { Save, X } from 'lucide-react';
+import { Save, X, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+
+// Define interfaces for type safety
+interface CompanyData {
+  id: string;
+  name: string;
+  founded_year: number | null;
+  total_employees: number | null;
+  industry: string | null;
+  business_activity: string | null;
+  last_revenue: number | null;
+  stage: string | null;
+}
+
+interface ValuationData {
+  id: string;
+  selected_valuation: number | null;
+  initial_estimate: number | null;
+  pre_money_valuation: number | null;
+  investment: number | null;
+  post_money_valuation: number | null;
+  valuation_min: number;
+  valuation_max: number;
+  funds_raised: number | null;
+  last_year_ebitda: number | null;
+  industry_multiple: number | null;
+  annual_roi: number | null;
+  companies: CompanyData | null;
+}
 
 export function ValuationContent() {
   const [rangeValue, setRangeValue] = useState(54);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['valuation'],
     queryFn: async () => {
       const { data: valuations, error: valuationError } = await supabase
@@ -30,7 +58,7 @@ export function ValuationContent() {
         return null;
       }
       
-      return valuations;
+      return valuations as ValuationData | null;
     }
   });
   
@@ -55,7 +83,7 @@ export function ValuationContent() {
     onError: (error) => {
       toast({
         title: "Error updating valuation",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive"
       });
     }
@@ -82,6 +110,10 @@ export function ValuationContent() {
     return <div className="p-4 text-center">Loading valuation data...</div>;
   }
   
+  if (error) {
+    return <div className="p-4 text-center text-red-500">Error loading valuation data: {error instanceof Error ? error.message : "Unknown error"}</div>;
+  }
+  
   if (!data) {
     return <div className="p-4 text-center">No valuation data available.</div>;
   }
@@ -99,27 +131,27 @@ export function ValuationContent() {
           <div className="grid grid-cols-2 gap-x-6 gap-y-3">
             <div>
               <span className="text-primary text-sm font-medium">Started in</span>
-              <p>{data.companies.founded_year}</p>
+              <p>{data.companies?.founded_year || 'N/A'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Employees</span>
-              <p>{data.companies.total_employees}</p>
+              <p>{data.companies?.total_employees || 'N/A'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Industry</span>
-              <p>{data.companies.industry}</p>
+              <p>{data.companies?.industry || 'N/A'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Business Activity</span>
-              <p>{data.companies.business_activity}</p>
+              <p>{data.companies?.business_activity || 'N/A'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Last Revenue</span>
-              <p>${data.companies.last_revenue}</p>
+              <p>${data.companies?.last_revenue || 'N/A'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Stage</span>
-              <p>{data.companies.stage}</p>
+              <p>{data.companies?.stage || 'N/A'}</p>
             </div>
           </div>
         </Card>
@@ -130,7 +162,7 @@ export function ValuationContent() {
           <div className="space-y-3">
             <div>
               <p className="font-medium">Initial Estimate</p>
-              <p className="text-xl font-bold">${data.initial_estimate}</p>
+              <p className="text-xl font-bold">${data.initial_estimate || '0'}</p>
             </div>
             
             <div className="flex justify-between items-center">
@@ -152,17 +184,17 @@ export function ValuationContent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Pre-Money Valuation</h3>
-            <p className="text-2xl font-bold">${data.pre_money_valuation}</p>
+            <p className="text-2xl font-bold">${data.pre_money_valuation || '0'}</p>
           </Card>
           
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Investment</h3>
-            <p className="text-2xl font-bold">${data.investment}</p>
+            <p className="text-2xl font-bold">${data.investment || '0'}</p>
           </Card>
           
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Post-Money Valuation</h3>
-            <p className="text-2xl font-bold">${data.post_money_valuation}</p>
+            <p className="text-2xl font-bold">${data.post_money_valuation || '0'}</p>
           </Card>
         </div>
         
@@ -213,19 +245,19 @@ export function ValuationContent() {
           <div className="space-y-3">
             <div>
               <span className="text-primary text-sm font-medium">Funds Raised</span>
-              <p>${data.funds_raised}</p>
+              <p>${data.funds_raised || '0'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Last Year EBITDA</span>
-              <p>${data.last_year_ebitda}</p>
+              <p>${data.last_year_ebitda || '0'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Industry Multiple</span>
-              <p>{data.industry_multiple}</p>
+              <p>{data.industry_multiple || '0'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Annual ROI</span>
-              <p>{data.annual_roi}%</p>
+              <p>{data.annual_roi || '0'}%</p>
             </div>
           </div>
         </Card>
