@@ -7,13 +7,49 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, formatPercentage, formatNumber } from '@/lib/formatters';
 
+// Define TypeScript interfaces for our data structures
+interface PerformanceMetric {
+  name: string;
+  unit: string;
+}
+
+interface PerformanceValue {
+  id: string;
+  actual: number | null;
+  target: number | null;
+  month: number;
+  year: number;
+  performance_metrics: PerformanceMetric | null;
+}
+
+interface ValuationData {
+  id: string;
+  selected_valuation: number | null;
+  annual_roi: number | null;
+  companies: {
+    name: string;
+    industry: string;
+  } | null;
+}
+
+interface ChartDataPoint {
+  month: string;
+  Revenue: number;
+  'Gross Margin': number;
+}
+
+interface ForecastDataPoint {
+  year: string;
+  value: number;
+}
+
 export default function FinancialOverview() {
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // Current month
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // Current year
   
   // Fetch performance metrics data
-  const { data: performanceData } = useQuery({
+  const { data: performanceData } = useQuery<PerformanceValue[]>({
     queryKey: ['performance-metrics'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -31,12 +67,12 @@ export default function FinancialOverview() {
         return [];
       }
       
-      return data;
+      return data as PerformanceValue[];
     },
   });
   
   // Fetch company and valuation data
-  const { data: valuationData } = useQuery({
+  const { data: valuationData } = useQuery<ValuationData>({
     queryKey: ['financial-valuation'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -50,12 +86,12 @@ export default function FinancialOverview() {
         return null;
       }
       
-      return data;
+      return data as ValuationData;
     },
   });
   
   // Process performance data for charts
-  const processChartData = () => {
+  const processChartData = (): ChartDataPoint[] => {
     if (!performanceData || performanceData.length === 0) {
       // Return default mock data if no real data exists
       return [
@@ -68,7 +104,7 @@ export default function FinancialOverview() {
     }
     
     // Group data by month/year
-    const groupedData = {};
+    const groupedData: Record<string, ChartDataPoint> = {};
     
     // Find revenue and gross margin metrics
     performanceData.forEach(item => {
@@ -98,7 +134,7 @@ export default function FinancialOverview() {
   };
   
   // Process forecast data
-  const processForecastData = () => {
+  const processForecastData = (): ForecastDataPoint[] => {
     if (!valuationData) {
       return [
         { year: '2025', value: 0 },
@@ -118,8 +154,8 @@ export default function FinancialOverview() {
   };
   
   // Get current month metrics
-  const getCurrentMonthMetrics = (metricName) => {
-    if (!performanceData) return null;
+  const getCurrentMonthMetrics = (metricName: string): PerformanceValue | undefined => {
+    if (!performanceData) return undefined;
     
     return performanceData.find(item => 
       item.month === selectedMonth && 
@@ -129,8 +165,8 @@ export default function FinancialOverview() {
   };
   
   // Calculate percentage change
-  const calculateChange = (actual, target) => {
-    if (!target || target === 0) return 0;
+  const calculateChange = (actual: number | null, target: number | null): number => {
+    if (!actual || !target || target === 0) return 0;
     return ((actual - target) / target) * 100;
   };
   
