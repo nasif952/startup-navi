@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatCurrency } from '@/lib/formatters';
 
 interface AddRoundDialogProps {
   trigger: React.ReactNode;
@@ -89,7 +90,9 @@ export function AddRoundDialog({ trigger, isFoundation = false, onRoundAdded }: 
         <DialogHeader>
           <DialogTitle>Add {isFoundation ? 'Foundation' : 'Funding'} Round</DialogTitle>
           <DialogDescription>
-            Add a new {isFoundation ? 'foundation' : 'funding'} round to your cap table.
+            {isFoundation 
+              ? "Add a foundation round to establish the initial shares of your company."
+              : "Add a funding round to record an investment into your company."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -103,23 +106,33 @@ export function AddRoundDialog({ trigger, isFoundation = false, onRoundAdded }: 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="col-span-3"
-                placeholder="e.g. Seed Round"
+                placeholder={isFoundation ? "e.g. Foundation Round" : "e.g. Seed Round"}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="valuation" className="text-right">
                 Valuation
               </Label>
-              <Input
-                id="valuation"
-                type="number"
-                min="0"
-                value={valuation}
-                onChange={(e) => setValuation(e.target.value)}
-                className="col-span-3"
-                placeholder="Company valuation"
-              />
+              <div className="col-span-3 relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="valuation"
+                  type="number"
+                  min="0"
+                  value={valuation}
+                  onChange={(e) => setValuation(e.target.value)}
+                  className="pl-7"
+                  placeholder="Company valuation"
+                />
+              </div>
             </div>
+            {parseFloat(valuation) > 0 && (
+              <div className="flex justify-end">
+                <span className="text-sm text-muted-foreground">
+                  Valuation: {formatCurrency(valuation, 0)}
+                </span>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button 

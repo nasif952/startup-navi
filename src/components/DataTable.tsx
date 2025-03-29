@@ -1,6 +1,14 @@
 
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell
+} from "@/components/ui/table";
 
 interface Column {
   key: string;
@@ -18,54 +26,48 @@ interface DataTableProps {
 
 export function DataTable({ columns, data, className, emptyState }: DataTableProps) {
   return (
-    <div className={cn("w-full overflow-x-auto", className)}>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-muted">
+    <div className={cn("w-full overflow-auto", className)}>
+      <Table>
+        <TableHeader>
+          <TableRow>
             {columns.map((column, i) => (
-              <th
+              <TableHead
                 key={i}
-                className={cn(
-                  "px-4 py-3 text-left text-sm font-medium text-foreground",
-                  column.className
-                )}
+                className={cn(column.className)}
               >
                 {column.header}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {data.length > 0 ? (
             data.map((item, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className="border-b border-border hover:bg-muted/30 transition-colors duration-200"
-              >
+              <TableRow key={rowIndex}>
                 {columns.map((column, colIndex) => (
-                  <td
+                  <TableCell
                     key={colIndex}
-                    className={cn("px-4 py-3 text-sm", column.className)}
+                    className={cn(column.className)}
                   >
                     {column.render
                       ? column.render(item[column.key], item)
                       : item[column.key]}
-                  </td>
+                  </TableCell>
                 ))}
-              </tr>
+              </TableRow>
             ))
           ) : (
-            <tr>
-              <td
+            <TableRow>
+              <TableCell
                 colSpan={columns.length}
-                className="text-center py-12 text-muted-foreground"
+                className="text-center h-24"
               >
                 {emptyState || "No data available"}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
