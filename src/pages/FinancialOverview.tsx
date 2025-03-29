@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -7,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, formatPercentage, formatNumber } from '@/lib/formatters';
 
-// Define TypeScript interfaces for our data structures
 interface PerformanceMetric {
   name: string;
   unit: string;
@@ -26,7 +24,7 @@ interface ValuationData {
   id: string;
   selected_valuation: number | null;
   annual_roi: number | null;
-  investment: number | null; // Added the missing investment property
+  investment: number | null;
   companies: {
     name: string;
     industry: string;
@@ -46,10 +44,9 @@ interface ForecastDataPoint {
 
 export default function FinancialOverview() {
   const { toast } = useToast();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // Current month
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear()); // Current year
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
-  // Fetch performance metrics data
   const { data: performanceData } = useQuery<PerformanceValue[]>({
     queryKey: ['performance-metrics'],
     queryFn: async () => {
@@ -68,11 +65,63 @@ export default function FinancialOverview() {
         return [];
       }
       
-      return data as PerformanceValue[];
+      if (!data || data.length === 0) {
+        const { data: metrics } = await supabase
+          .from('performance_metrics')
+          .select('*')
+          .eq('is_default', true);
+          
+        if (metrics && metrics.length > 0) {
+          const currentMonth = new Date().getMonth() + 1;
+          const currentYear = new Date().getFullYear();
+          
+          const sampleData = metrics.map(metric => {
+            let actual = 0;
+            let target = 0;
+            
+            if (metric.name.toLowerCase() === 'revenue') {
+              actual = 120000;
+              target = 100000;
+            } else if (metric.name.toLowerCase() === 'gross margin') {
+              actual = 35;
+              target = 30;
+            } else if (metric.name.toLowerCase() === 'cash on hand') {
+              actual = 250000;
+              target = 200000;
+            } else if (metric.name.toLowerCase().includes('customer')) {
+              actual = 125;
+              target = 100;
+            }
+            
+            return {
+              metric_id: metric.id,
+              month: currentMonth,
+              year: currentYear,
+              actual: actual,
+              target: target
+            };
+          });
+          
+          for (const sample of sampleData) {
+            await supabase.from('performance_values').upsert(sample, {
+              onConflict: 'metric_id, month, year'
+            });
+          }
+          
+          const { data: refreshedData } = await supabase
+            .from('performance_values')
+            .select('*, performance_metrics(name, unit)')
+            .order('year', { ascending: true })
+            .order('month', { ascending: true });
+            
+          return refreshedData || [];
+        }
+      }
+      
+      return data || [];
     },
   });
   
-  // Fetch company and valuation data
   const { data: valuationData } = useQuery<ValuationData>({
     queryKey: ['financial-valuation'],
     queryFn: async () => {
@@ -91,10 +140,8 @@ export default function FinancialOverview() {
     },
   });
   
-  // Process performance data for charts
   const processChartData = (): ChartDataPoint[] => {
     if (!performanceData || performanceData.length === 0) {
-      // Return default mock data if no real data exists
       return [
         { month: '10/2024', Revenue: 0, 'Gross Margin': 0 },
         { month: '11/2024', Revenue: 0, 'Gross Margin': 0 },
@@ -104,10 +151,8 @@ export default function FinancialOverview() {
       ];
     }
     
-    // Group data by month/year
     const groupedData: Record<string, ChartDataPoint> = {};
     
-    // Find revenue and gross margin metrics
     performanceData.forEach(item => {
       const monthYear = `${item.month}/${item.year}`;
       
@@ -115,7 +160,6 @@ export default function FinancialOverview() {
         groupedData[monthYear] = { month: monthYear, Revenue: 0, 'Gross Margin': 0 };
       }
       
-      // Check the metric name and assign values
       const metricName = item.performance_metrics?.name?.toLowerCase();
       if (metricName === 'revenue') {
         groupedData[monthYear].Revenue = item.actual || 0;
@@ -124,7 +168,6 @@ export default function FinancialOverview() {
       }
     });
     
-    // Convert to array and sort by date
     return Object.values(groupedData).sort((a, b) => {
       const [aMonth, aYear] = a.month.split('/').map(Number);
       const [bMonth, bYear] = b.month.split('/').map(Number);
@@ -134,7 +177,6 @@ export default function FinancialOverview() {
     });
   };
   
-  // Process forecast data
   const processForecastData = (): ForecastDataPoint[] => {
     if (!valuationData) {
       return [
@@ -154,30 +196,28 @@ export default function FinancialOverview() {
     ];
   };
   
-  // Get current month metrics
   const getCurrentMonthMetrics = (metricName: string): PerformanceValue | undefined => {
-    if (!performanceData) return undefined;
+    if (!performanceData || performanceData.length === 0) return undefined;
+    
+    const lowerMetricName = metricName.toLowerCase();
     
     return performanceData.find(item => 
       item.month === selectedMonth && 
       item.year === selectedYear && 
-      item.performance_metrics?.name?.toLowerCase() === metricName.toLowerCase()
+      item.performance_metrics?.name?.toLowerCase() === lowerMetricName
     );
   };
   
-  // Calculate percentage change
   const calculateChange = (actual: number | null, target: number | null): number => {
     if (!actual || !target || target === 0) return 0;
     return ((actual - target) / target) * 100;
   };
   
-  // Get metrics for display
   const revenueMetric = getCurrentMonthMetrics('revenue');
   const grossMarginMetric = getCurrentMonthMetrics('gross margin');
   const cashMetric = getCurrentMonthMetrics('cash on hand');
   const customersMetric = getCurrentMonthMetrics('no. of paying customers');
   
-  // Chart data
   const financialData = processChartData();
   const forecastData = processForecastData();
   

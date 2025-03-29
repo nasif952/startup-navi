@@ -64,9 +64,18 @@ export function ValuationContent() {
   
   const updateValuationMutation = useMutation({
     mutationFn: async ({ id, value }: { id: string, value: number }) => {
+      // Calculate other values based on selected valuation
+      const investment = value * 1000 * 0.15; // 15% of valuation as investment
+      const postMoney = value * 1000 + investment;
+      
       const { data, error } = await supabase
         .from('valuations')
-        .update({ selected_valuation: value * 1000 })
+        .update({ 
+          selected_valuation: value * 1000,
+          pre_money_valuation: value * 1000,
+          investment: investment,
+          post_money_valuation: postMoney
+        })
         .eq('id', id)
         .select();
         
@@ -75,6 +84,7 @@ export function ValuationContent() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['valuation'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-valuation'] });
       toast({
         title: "Valuation updated",
         description: "The valuation has been updated successfully."
@@ -147,7 +157,7 @@ export function ValuationContent() {
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Last Revenue</span>
-              <p>${data.companies?.last_revenue || 'N/A'}</p>
+              <p>${data.companies?.last_revenue?.toLocaleString() || 'N/A'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Stage</span>
@@ -162,7 +172,7 @@ export function ValuationContent() {
           <div className="space-y-3">
             <div>
               <p className="font-medium">Initial Estimate</p>
-              <p className="text-xl font-bold">${data.initial_estimate || '0'}</p>
+              <p className="text-xl font-bold">${data.initial_estimate?.toLocaleString() || '0'}</p>
             </div>
             
             <div className="flex justify-between items-center">
@@ -184,17 +194,17 @@ export function ValuationContent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Pre-Money Valuation</h3>
-            <p className="text-2xl font-bold">${data.pre_money_valuation || '0'}</p>
+            <p className="text-2xl font-bold">${data.pre_money_valuation?.toLocaleString() || '0'}</p>
           </Card>
           
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Investment</h3>
-            <p className="text-2xl font-bold">${data.investment || '0'}</p>
+            <p className="text-2xl font-bold">${data.investment?.toLocaleString() || '0'}</p>
           </Card>
           
           <Card>
             <h3 className="text-sm text-muted-foreground mb-1">Post-Money Valuation</h3>
-            <p className="text-2xl font-bold">${data.post_money_valuation || '0'}</p>
+            <p className="text-2xl font-bold">${data.post_money_valuation?.toLocaleString() || '0'}</p>
           </Card>
         </div>
         
@@ -202,11 +212,11 @@ export function ValuationContent() {
           <div className="flex justify-between mb-4">
             <div>
               <span className="text-sm text-muted-foreground">Low</span>
-              <p className="font-medium">${data.valuation_min.toFixed(2)}</p>
+              <p className="font-medium">${data.valuation_min.toLocaleString()}</p>
             </div>
             <div className="text-right">
               <span className="text-sm text-muted-foreground">High</span>
-              <p className="font-medium">${data.valuation_max.toFixed(2)}</p>
+              <p className="font-medium">${data.valuation_max.toLocaleString()}</p>
             </div>
           </div>
           
@@ -222,7 +232,7 @@ export function ValuationContent() {
           
           <div className="text-center mt-4">
             <span className="text-sm text-muted-foreground">Selected</span>
-            <p className="font-bold text-lg">${rangeValue},000.00</p>
+            <p className="font-bold text-lg">${rangeValue.toLocaleString()},000.00</p>
           </div>
           
           <div className="mt-4 flex justify-end">
@@ -245,19 +255,19 @@ export function ValuationContent() {
           <div className="space-y-3">
             <div>
               <span className="text-primary text-sm font-medium">Funds Raised</span>
-              <p>${data.funds_raised || '0'}</p>
+              <p>${data.funds_raised?.toLocaleString() || '0'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Last Year EBITDA</span>
-              <p>${data.last_year_ebitda || '0'}</p>
+              <p>${data.last_year_ebitda?.toLocaleString() || '0'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Industry Multiple</span>
-              <p>{data.industry_multiple || '0'}</p>
+              <p>{data.industry_multiple?.toFixed(2) || '0'}</p>
             </div>
             <div>
               <span className="text-primary text-sm font-medium">Annual ROI</span>
-              <p>{data.annual_roi || '0'}%</p>
+              <p>{data.annual_roi?.toFixed(2) || '0'}%</p>
             </div>
           </div>
         </Card>

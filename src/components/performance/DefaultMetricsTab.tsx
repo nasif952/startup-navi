@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -20,28 +19,104 @@ interface MetricItem {
 // Mock API function to simulate saving metrics to a server
 const saveMetricsToServer = async (data: any) => {
   console.log('Saving metrics to server:', data);
-  // Simulate API call
-  return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 500));
+  
+  // Actually save the metrics to the database
+  const { month, year, metrics } = data;
+  
+  // For each metric, upsert a row in performance_metrics and performance_values
+  for (const metric of metrics) {
+    // First, ensure the metric exists in performance_metrics
+    const { data: metricData, error: metricError } = await supabase
+      .from('performance_metrics')
+      .upsert({
+        id: metric.id,
+        name: metric.name,
+        unit: metric.unit,
+        is_default: true
+      }, { onConflict: 'id' })
+      .select('id')
+      .single();
+      
+    if (metricError) {
+      console.error('Error saving metric:', metricError);
+      throw metricError;
+    }
+    
+    // Then save the actual value
+    const { error: valueError } = await supabase
+      .from('performance_values')
+      .upsert({
+        metric_id: metricData.id,
+        month: parseInt(month),
+        year: parseInt(year),
+        target: metric.target ? parseFloat(metric.target) : null,
+        actual: metric.actual ? parseFloat(metric.actual) : null
+      }, { onConflict: 'metric_id, month, year' });
+      
+    if (valueError) {
+      console.error('Error saving metric value:', valueError);
+      throw valueError;
+    }
+  }
+  
+  return { success: true };
 };
 
 // Mock API function to fetch saved metrics
 const fetchSavedMetrics = async (month: string, year: string) => {
   console.log('Fetching metrics for', month, year);
-  // In a real app, we would fetch from the server based on month/year
-  // For now, we'll return mock data for demonstration
-  await new Promise(resolve => setTimeout(resolve, 300));
   
-  // This simulates different data for different month/year combinations
-  if (month === 'February' && year === '2025') {
-    return [
-      { id: '1', name: 'Revenue', target: '150000', actual: '145000', unit: '$' },
-      { id: '2', name: 'Gross Margin', target: '35', actual: '32', unit: '%' },
-      { id: '3', name: 'Cash on Hand', target: '350000', actual: '342000', unit: '$' },
-      { id: '4', name: 'No. of Paying Customers', target: '250', actual: '245', unit: '#' },
-    ];
+  // First, get all default metrics
+  const { data: metricsData, error: metricsError } = await supabase
+    .from('performance_metrics')
+    .select('*')
+    .eq('is_default', true);
+    
+  if (metricsError) {
+    console.error('Error fetching metrics:', metricsError);
+    throw metricsError;
   }
   
-  return [];
+  // Map month name to number
+  const monthMap: Record<string, number> = {
+    January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
+    July: 7, August: 8, September: 9, October: 10, November: 11, December: 12
+  };
+  
+  const monthNum = monthMap[month];
+  const yearNum = parseInt(year);
+  
+  // Then get values for the specific month and year
+  const { data: valuesData, error: valuesError } = await supabase
+    .from('performance_values')
+    .select('*, performance_metrics(*)')
+    .eq('month', monthNum)
+    .eq('year', yearNum);
+    
+  if (valuesError) {
+    console.error('Error fetching values:', valuesError);
+    throw valuesError;
+  }
+  
+  // If we have values, return them, otherwise create default entries based on metricsData
+  if (valuesData && valuesData.length > 0) {
+    return valuesData.map(value => ({
+      id: value.metric_id,
+      name: value.performance_metrics.name,
+      target: value.target?.toString() || '',
+      actual: value.actual?.toString() || '',
+      unit: value.performance_metrics.unit
+    }));
+  } else {
+    // Create default entries if no data exists yet
+    return metricsData.map(metric => ({
+      id: metric.id,
+      name: metric.name,
+      target: '',
+      actual: '',
+      unit: metric.unit
+    }));
+  }
 };
 
 export function DefaultMetricsTab() {
@@ -59,6 +134,40 @@ export function DefaultMetricsTab() {
   const [newMetric, setNewMetric] = useState({ name: '', unit: '' });
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkData, setBulkData] = useState('');
+
+  // Add function to ensure default metrics exist
+  useEffect(() => {
+    const ensureDefaultMetricsExist = async () => {
+      // Check if default metrics exist
+      const { data: existingMetrics, error } = await supabase
+        .from('performance_metrics')
+        .select('*')
+        .eq('is_default', true);
+        
+      if (error) {
+        console.error('Error checking default metrics:', error);
+        return;
+      }
+      
+      // If no default metrics exist, create them
+      if (!existingMetrics || existingMetrics.length === 0) {
+        const defaultMetrics = [
+          { name: 'Revenue', unit: '$', is_default: true },
+          { name: 'Gross Margin', unit: '%', is_default: true },
+          { name: 'Cash on Hand', unit: '$', is_default: true },
+          { name: 'No. of Paying Customers', unit: '#', is_default: true }
+        ];
+        
+        for (const metric of defaultMetrics) {
+          await supabase.from('performance_metrics').insert(metric);
+        }
+        
+        console.log('Default metrics created');
+      }
+    };
+    
+    ensureDefaultMetricsExist();
+  }, []);
 
   // Query to fetch saved metrics based on selected month and year
   const { data: savedMetrics, isLoading } = useQuery({
