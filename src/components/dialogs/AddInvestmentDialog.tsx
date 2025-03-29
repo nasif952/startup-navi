@@ -43,7 +43,7 @@ export function AddInvestmentDialog({
 }: AddInvestmentDialogProps) {
   const [open, setOpen] = useState(false);
   const [shareholderId, setShareholderId] = useState('');
-  const [shareClassId, setShareClassId] = useState('');
+  const [shareClassId, setShareClassId] = useState('common');
   const [numberOfShares, setNumberOfShares] = useState('0');
   const [sharePrice, setSharePrice] = useState('0.01');
   const [capitalInvested, setCapitalInvested] = useState('0');
@@ -91,7 +91,7 @@ export function AddInvestmentDialog({
         .insert({
           round_id: roundId,
           shareholder_id: shareholderId,
-          share_class_id: shareClassId || null,
+          share_class_id: shareClassId === 'common' ? null : shareClassId,
           number_of_shares: parseInt(numberOfShares),
           share_price: parseFloat(sharePrice),
           capital_invested: parseFloat(capitalInvested)
@@ -175,7 +175,7 @@ export function AddInvestmentDialog({
 
   const resetForm = () => {
     setShareholderId('');
-    setShareClassId('');
+    setShareClassId('common');
     setNumberOfShares('0');
     setSharePrice('0.01');
     setCapitalInvested('0');
@@ -249,7 +249,7 @@ export function AddInvestmentDialog({
                     <SelectValue placeholder="Select a share class" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Common (Default)</SelectItem>
+                    <SelectItem value="common">Common (Default)</SelectItem>
                     {shareClasses.map((shareClass) => (
                       <SelectItem key={shareClass.id} value={shareClass.id}>
                         {shareClass.name}
