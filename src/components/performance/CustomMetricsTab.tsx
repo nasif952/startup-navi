@@ -1,17 +1,79 @@
 
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/Button';
 import { Plus } from 'lucide-react';
 import { MetricInfoCard } from './MetricInfoCard';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+
+interface CustomMetric {
+  id: string;
+  title: string;
+  description: string;
+  unit: string;
+  category: string;
+}
 
 export function CustomMetricsTab() {
   const { toast } = useToast();
+  const [isAddMetricOpen, setIsAddMetricOpen] = useState(false);
+  const [newMetric, setNewMetric] = useState<Partial<CustomMetric>>({
+    title: '',
+    description: '',
+    unit: '',
+    category: 'Financial'
+  });
+  
+  // Default categories
+  const categories = [
+    'Financial Transactions & KPIs',
+    'Sales Traction & KPIs',
+    'Marketing Traction & KPIs'
+  ];
+  
+  // State for custom metrics
+  const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
   
   const handleAddCustomMetric = () => {
-    toast({
-      title: "Add Custom Metric",
-      description: "This functionality will allow you to create a new custom metric"
-    });
+    setIsAddMetricOpen(true);
+  };
+  
+  const submitNewMetric = () => {
+    if (newMetric.title && newMetric.description && newMetric.unit && newMetric.category) {
+      const newMetricObj = {
+        id: Date.now().toString(),
+        title: newMetric.title,
+        description: newMetric.description,
+        unit: newMetric.unit,
+        category: newMetric.category
+      };
+      
+      setCustomMetrics([...customMetrics, newMetricObj]);
+      
+      // Reset form
+      setNewMetric({
+        title: '',
+        description: '',
+        unit: '',
+        category: 'Financial'
+      });
+      
+      setIsAddMetricOpen(false);
+      
+      toast({
+        title: "Custom Metric Added",
+        description: `"${newMetric.title}" has been added to your custom metrics.`
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields to add a custom metric.",
+        variant: "destructive"
+      });
+    }
   };
   
   return (
@@ -73,6 +135,17 @@ export function CustomMetricsTab() {
               description="Cash payments - cash collections" 
               unit="Currency" 
             />
+            {customMetrics
+              .filter(metric => metric.category === 'Financial Transactions & KPIs')
+              .map(metric => (
+                <MetricInfoCard 
+                  key={metric.id}
+                  title={metric.title} 
+                  description={metric.description} 
+                  unit={metric.unit}
+                />
+              ))
+            }
           </div>
           
           <h3 className="text-lg font-semibold text-primary mb-4">2. Sales Traction & KPIs</h3>
@@ -98,6 +171,17 @@ export function CustomMetricsTab() {
               description="Total Sales and Marketing Expenses/New Customer Acquired" 
               unit="Currency" 
             />
+            {customMetrics
+              .filter(metric => metric.category === 'Sales Traction & KPIs')
+              .map(metric => (
+                <MetricInfoCard 
+                  key={metric.id}
+                  title={metric.title} 
+                  description={metric.description} 
+                  unit={metric.unit}
+                />
+              ))
+            }
           </div>
           
           <h3 className="text-lg font-semibold text-primary mb-4">3. Marketing Traction & KPIs</h3>
@@ -113,9 +197,78 @@ export function CustomMetricsTab() {
               description="Total Customers churned in this time period/Total customers at the start of this time period * 100" 
               unit="Percentage" 
             />
+            {customMetrics
+              .filter(metric => metric.category === 'Marketing Traction & KPIs')
+              .map(metric => (
+                <MetricInfoCard 
+                  key={metric.id}
+                  title={metric.title} 
+                  description={metric.description} 
+                  unit={metric.unit}
+                />
+              ))
+            }
           </div>
         </div>
       </div>
+      
+      {/* Add Custom Metric Dialog */}
+      <Dialog open={isAddMetricOpen} onOpenChange={setIsAddMetricOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Custom Metric</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="metric-title" className="col-span-1">Title</Label>
+              <Input 
+                id="metric-title" 
+                value={newMetric.title} 
+                onChange={(e) => setNewMetric({...newMetric, title: e.target.value})}
+                className="col-span-3" 
+                placeholder="e.g., Customer Lifetime Value"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="metric-description" className="col-span-1">Description</Label>
+              <Textarea 
+                id="metric-description" 
+                value={newMetric.description} 
+                onChange={(e) => setNewMetric({...newMetric, description: e.target.value})}
+                className="col-span-3" 
+                placeholder="How this metric is calculated or what it represents"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="metric-unit" className="col-span-1">Unit</Label>
+              <Input 
+                id="metric-unit" 
+                value={newMetric.unit} 
+                onChange={(e) => setNewMetric({...newMetric, unit: e.target.value})}
+                className="col-span-3" 
+                placeholder="e.g., Currency, Percentage, Numbers"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="metric-category" className="col-span-1">Category</Label>
+              <select
+                id="metric-category"
+                value={newMetric.category}
+                onChange={(e) => setNewMetric({...newMetric, category: e.target.value})}
+                className="col-span-3 w-full rounded-md border border-input p-2"
+              >
+                {categories.map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddMetricOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={submitNewMetric}>Add Metric</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
