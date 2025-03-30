@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/Card';
@@ -259,20 +258,54 @@ export default function CapTable() {
     }
   };
 
-  // Export to Excel function (simplified mock)
-  const handleExportToExcel = () => {
-    toast({
-      title: "Export started",
-      description: "Your data is being exported to Excel"
+  // Export to Excel function - implement actual functionality
+  const handleExportToExcel = (data, filename) => {
+    if (!data || data.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "There is no data available to export"
+      });
+      return;
+    }
+    
+    // Create CSV content
+    let csvContent = '';
+    
+    // Get all unique keys from all objects
+    const allKeys = Array.from(new Set(data.flatMap(obj => Object.keys(obj))));
+    
+    // Create header row
+    csvContent += allKeys.join(',') + '\n';
+    
+    // Create data rows
+    data.forEach(item => {
+      const row = allKeys.map(key => {
+        const value = item[key] === null || item[key] === undefined ? '' : item[key];
+        // Handle commas and quotes in the value
+        const formattedValue = typeof value === 'string' ? 
+          `"${value.replace(/"/g, '""')}"` : 
+          value;
+        return formattedValue;
+      }).join(',');
+      csvContent += row + '\n';
     });
     
-    // In a real implementation, this would generate an Excel file
-    setTimeout(() => {
-      toast({
-        title: "Export complete",
-        description: "Your Excel file has been downloaded"
-      });
-    }, 1500);
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export complete",
+      description: `${filename}.csv has been downloaded`
+    });
   };
 
   // Calculate percentages and totals for shareholders
@@ -389,7 +422,16 @@ export default function CapTable() {
               variant="ghost" 
               size="sm" 
               iconLeft={<Download size={16} />}
-              onClick={handleExportToExcel}
+              onClick={() => handleExportToExcel(
+                selectedFoundationRound?.investments?.map(inv => ({
+                  Shareholder: inv.shareholders?.name || 'Unknown',
+                  'Number of Shares': inv.number_of_shares,
+                  'Share Price': inv.share_price,
+                  'Share Class': inv.share_classes?.name || 'Common',
+                  'Capital Invested': inv.capital_invested
+                })) || [], 
+                'foundation-round'
+              )}
             >
               Export to Excel
             </Button>
@@ -551,7 +593,16 @@ export default function CapTable() {
               variant="ghost" 
               size="sm" 
               iconLeft={<Download size={16} />}
-              onClick={handleExportToExcel}
+              onClick={() => handleExportToExcel(
+                selectedRound?.investments?.map(inv => ({
+                  Shareholder: inv.shareholders?.name || 'Unknown',
+                  'Number of Shares': inv.number_of_shares,
+                  'Share Price': inv.share_price,
+                  'Share Class': inv.share_classes?.name || 'Common',
+                  'Capital Invested': inv.capital_invested
+                })) || [], 
+                `round-${selectedRound?.name || 'data'}`
+              )}
             >
               Export to Excel
             </Button>
