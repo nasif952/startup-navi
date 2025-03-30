@@ -388,6 +388,82 @@ export type Database = {
           },
         ]
       }
+      pitch_deck_analyses: {
+        Row: {
+          analysis: Json | null
+          created_at: string | null
+          file_id: string | null
+          id: string
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          upload_date: string | null
+        }
+        Insert: {
+          analysis?: Json | null
+          created_at?: string | null
+          file_id?: string | null
+          id?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          upload_date?: string | null
+        }
+        Update: {
+          analysis?: Json | null
+          created_at?: string | null
+          file_id?: string | null
+          id?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          upload_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pitch_deck_analyses_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pitch_deck_metrics: {
+        Row: {
+          analysis_id: string | null
+          created_at: string | null
+          feedback: string | null
+          id: string
+          metric_name: string
+          score: number | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          metric_name: string
+          score?: number | null
+        }
+        Update: {
+          analysis_id?: string | null
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          metric_name?: string
+          score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pitch_deck_metrics_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "pitch_deck_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questionnaire_questions: {
         Row: {
           created_at: string | null

@@ -1,6 +1,5 @@
 
 import { Button as ShadcnButton } from "@/components/ui/button";
-import { Slot } from "@radix-ui/react-slot";
 import React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from 'lucide-react';
