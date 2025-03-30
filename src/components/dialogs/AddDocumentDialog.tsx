@@ -107,7 +107,7 @@ export function AddDocumentDialog({ folderId, onDocumentAdded }: AddDocumentDial
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="primary" size="sm" className="flex items-center gap-2">
+        <Button variant="default" size="sm" className="flex items-center gap-2">
           <Upload size={16} />
           Upload File
         </Button>
