@@ -1,9 +1,8 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuidv4 } from 'uuid'; // Fix import of uuid
+import { v4 as uuidv4 } from 'uuid'; // Fixed import of uuid
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +15,7 @@ export function UploadPitchDeck() {
   const [analyzing, setAnalyzing] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-
+  
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     
@@ -59,16 +58,10 @@ export function UploadPitchDeck() {
       setUploading(true);
       setUploadProgress(0);
       
-      // Generate unique storage path
+      // Generate unique storage path using the imported uuid function
       const filePath = `${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
       
-      // Create a custom onUploadProgress function
-      const progressHandler = (progress: { loaded: number; total: number }) => {
-        const percent = Math.round((progress.loaded / progress.total) * 100);
-        setUploadProgress(percent);
-      };
-      
-      // Upload file to storage with manual progress handling
+      // Upload file to storage without onUploadProgress
       const { data: storageData, error: storageError } = await supabase
         .storage
         .from('pitch-decks')
