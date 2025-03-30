@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ import { FileUp, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MetricItem {
   id: string;
