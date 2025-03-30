@@ -38,7 +38,7 @@ export function AnalysisList() {
           title: item.title || 'Untitled Analysis',
           status: item.status || 'unknown',
           upload_date: item.upload_date,
-          overall_score: item.analysis?.overallScore || null,
+          overall_score: item.analysis && typeof item.analysis === 'object' ? (item.analysis as any).overallScore : null,
         }));
         
         setAnalyses(formattedData);

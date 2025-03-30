@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuidv4 } from '@supabase/supabase-js/dist/module/lib/helpers';
+import { v4 as uuidv4 } from 'uuid'; // Fix import of uuid
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Upload, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Upload, CheckCircle } from 'lucide-react';
 
 export function UploadPitchDeck() {
   const [file, setFile] = useState<File | null>(null);
@@ -62,17 +62,19 @@ export function UploadPitchDeck() {
       // Generate unique storage path
       const filePath = `${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
       
-      // Upload file to storage
+      // Create a custom onUploadProgress function
+      const progressHandler = (progress: { loaded: number; total: number }) => {
+        const percent = Math.round((progress.loaded / progress.total) * 100);
+        setUploadProgress(percent);
+      };
+      
+      // Upload file to storage with manual progress handling
       const { data: storageData, error: storageError } = await supabase
         .storage
         .from('pitch-decks')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false,
-          onUploadProgress: (progress) => {
-            const percent = Math.round((progress.loaded / progress.total) * 100);
-            setUploadProgress(percent);
-          }
+          upsert: false
         });
 
       if (storageError) {
@@ -105,11 +107,15 @@ export function UploadPitchDeck() {
       setUploading(false);
       setAnalyzing(true);
 
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token || '';
+
       const analysisResponse = await fetch(`${window.location.origin}/functions/v1/analyze-pitch-deck`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token || ''}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ fileId: fileData.id }),
       });
