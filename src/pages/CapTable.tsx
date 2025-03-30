@@ -12,6 +12,8 @@ import { AddShareClassDialog } from '@/components/dialogs/AddShareClassDialog';
 import { TransferSharesDialog } from '@/components/dialogs/TransferSharesDialog';
 import { AddESOPDialog } from '@/components/dialogs/AddESOPDialog';
 import { AddLoanDialog } from '@/components/dialogs/AddLoanDialog';
+import { EditShareholderDialog } from '@/components/dialogs/EditShareholderDialog';
+import { EditInvestmentDialog } from '@/components/dialogs/EditInvestmentDialog';
 import { formatCurrency, formatPercentage, formatNumber } from '@/lib/formatters';
 import {
   Table,
@@ -258,7 +260,7 @@ export default function CapTable() {
     }
   };
 
-  // Fix for line 283 - Properly type the data for export
+  // Fixed export to Excel functionality
   const handleExportToExcel = (data, filename) => {
     if (!data || data.length === 0) {
       toast({
@@ -268,69 +270,39 @@ export default function CapTable() {
       return;
     }
     
-    // Use the DataTable component to handle the export
-    // This avoids the type errors we were encountering
-    const columns = [
-      { 
-        key: 'shareholder', 
-        header: 'Shareholder',
-        export: (value) => value || 'Unknown'
-      },
-      { 
-        key: 'number_of_shares', 
-        header: 'Number of Shares',
-        export: (value) => value?.toString() || '0'
-      },
-      { 
-        key: 'share_price', 
-        header: 'Share Price',
-        export: (value) => value?.toString() || '0'
-      },
-      { 
-        key: 'share_class', 
-        header: 'Share Class',
-        export: (value) => value || 'Common'
-      },
-      { 
-        key: 'capital_invested', 
-        header: 'Capital Invested',
-        export: (value) => value?.toString() || '0'
-      }
-    ];
-    
-    // Transform data to match the column keys
+    // Using a more direct approach to avoid any type errors
+    // Get only real investment data with proper formatting
     const formattedData = data.map(item => ({
-      shareholder: item.shareholders?.name || 'Unknown',
-      number_of_shares: item.number_of_shares,
-      share_price: item.share_price,
-      share_class: item.share_classes?.name || 'Common',
-      capital_invested: item.capital_invested
+      Shareholder: item.shareholders?.name || 'Unknown',
+      'Number of Shares': item.number_of_shares || 0,
+      'Share Price': item.share_price || 0,
+      'Share Class': item.share_classes?.name || 'Common',
+      'Capital Invested': item.capital_invested || 0
     }));
     
-    // Create CSV content
-    const headers = columns.map(col => `"${col.header}"`).join(',');
+    // Create CSV content with explicit headers
+    const headers = [
+      'Shareholder',
+      'Number of Shares',
+      'Share Price',
+      'Share Class',
+      'Capital Invested'
+    ];
     
-    const rows = formattedData.map(item => {
-      return columns.map(column => {
-        let cellValue = item[column.key];
-        if (column.export) {
-          cellValue = column.export(cellValue);
-        }
-        
-        // Escape quotes and ensure string format
-        if (cellValue === null || cellValue === undefined) {
-          return '""';
-        }
-        
-        if (typeof cellValue === 'string') {
-          return `"${cellValue.replace(/"/g, '""')}"`;
-        }
-        
-        return `"${String(cellValue)}"`;
-      }).join(',');
-    }).join('\n');
-
-    const csvContent = `${headers}\n${rows}`;
+    // Create header row
+    let csvContent = headers.map(header => `"${header}"`).join(',') + '\n';
+    
+    // Create data rows
+    formattedData.forEach(item => {
+      const row = [
+        `"${String(item['Shareholder']).replace(/"/g, '""')}"`,
+        `"${String(item['Number of Shares']).replace(/"/g, '""')}"`,
+        `"${String(item['Share Price']).replace(/"/g, '""')}"`,
+        `"${String(item['Share Class']).replace(/"/g, '""')}"`,
+        `"${String(item['Capital Invested']).replace(/"/g, '""')}"`,
+      ];
+      csvContent += row.join(',') + '\n';
+    });
     
     // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -388,7 +360,19 @@ export default function CapTable() {
           <Card className="md:col-span-3">
             <DataTable
               columns={[
-                { key: 'name', header: 'Name' },
+                { 
+                  key: 'name', 
+                  header: 'Name',
+                  render: (value, item) => (
+                    <div className="flex items-center">
+                      <span className="mr-2">{value}</span>
+                      <EditShareholderDialog 
+                        shareholder={{id: item.id, name: item.name, contact: item.contact}} 
+                        onShareholderEdited={handleDataChange} 
+                      />
+                    </div>
+                  )
+                },
                 { 
                   key: 'total_shares', 
                   header: 'Shares',
@@ -407,6 +391,7 @@ export default function CapTable() {
                 { key: 'contact', header: 'Contact' },
               ]}
               data={shareholders}
+              exportFilename="shareholders"
               emptyState={
                 <div className="flex flex-col items-center py-8">
                   <p className="text-muted-foreground mb-4">No shareholders added yet</p>
@@ -465,13 +450,7 @@ export default function CapTable() {
               size="sm" 
               iconLeft={<Download size={16} />}
               onClick={() => handleExportToExcel(
-                selectedFoundationRound?.investments?.map(inv => ({
-                  Shareholder: inv.shareholders?.name || 'Unknown',
-                  'Number of Shares': inv.number_of_shares,
-                  'Share Price': inv.share_price,
-                  'Share Class': inv.share_classes?.name || 'Common',
-                  'Capital Invested': inv.capital_invested
-                })) || [], 
+                selectedFoundationRound?.investments || [], 
                 'foundation-round'
               )}
             >
@@ -528,7 +507,11 @@ export default function CapTable() {
                 {selectedFoundationRound?.investments?.length > 0 ? (
                   selectedFoundationRound.investments.map(investment => (
                     <TableRow key={investment.id}>
-                      <TableCell>{investment.shareholders?.name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="mr-2">{investment.shareholders?.name || 'Unknown'}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>{formatNumber(investment.number_of_shares)}</TableCell>
                       <TableCell>{formatCurrency(investment.share_price)}</TableCell>
                       <TableCell>{investment.share_classes?.name || 'Common'}</TableCell>
@@ -538,6 +521,13 @@ export default function CapTable() {
                           ? formatPercentage((investment.number_of_shares / selectedFoundationRound.round_summaries[0].total_shares) * 100)
                           : '0%'
                         }
+                      </TableCell>
+                      <TableCell>
+                        <EditInvestmentDialog 
+                          investment={investment} 
+                          shareClasses={shareClasses}
+                          onInvestmentEdited={handleDataChange} 
+                        />
                       </TableCell>
                     </TableRow>
                   ))
@@ -595,6 +585,7 @@ export default function CapTable() {
                       {formatCurrency(selectedFoundationRound?.round_summaries?.[0]?.total_capital || 0)}
                     </TableCell>
                     <TableCell>100%</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -636,13 +627,7 @@ export default function CapTable() {
               size="sm" 
               iconLeft={<Download size={16} />}
               onClick={() => handleExportToExcel(
-                selectedRound?.investments?.map(inv => ({
-                  Shareholder: inv.shareholders?.name || 'Unknown',
-                  'Number of Shares': inv.number_of_shares,
-                  'Share Price': inv.share_price,
-                  'Share Class': inv.share_classes?.name || 'Common',
-                  'Capital Invested': inv.capital_invested
-                })) || [], 
+                selectedRound?.investments || [], 
                 `round-${selectedRound?.name || 'data'}`
               )}
             >
@@ -698,13 +683,24 @@ export default function CapTable() {
                 {selectedRound?.investments?.length > 0 ? (
                   selectedRound.investments.map(investment => (
                     <TableRow key={investment.id}>
-                      <TableCell>{investment.shareholders?.name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="mr-2">{investment.shareholders?.name || 'Unknown'}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>{formatNumber(investment.number_of_shares)}</TableCell>
                       <TableCell>{formatCurrency(investment.share_price)}</TableCell>
                       <TableCell>{investment.share_classes?.name || 'Common'}</TableCell>
                       <TableCell>{formatCurrency(investment.capital_invested)}</TableCell>
                       <TableCell>
                         {formatCurrency(investment.number_of_shares * investment.share_price)}
+                      </TableCell>
+                      <TableCell>
+                        <EditInvestmentDialog 
+                          investment={investment} 
+                          shareClasses={shareClasses}
+                          onInvestmentEdited={handleDataChange} 
+                        />
                       </TableCell>
                     </TableRow>
                   ))
@@ -762,6 +758,7 @@ export default function CapTable() {
                     <TableCell>
                       {formatCurrency(selectedRound?.valuation || 0, 0)}
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 )}
               </TableBody>
