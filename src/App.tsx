@@ -12,6 +12,9 @@ import Performance from "./pages/Performance";
 import CapTable from "./pages/CapTable";
 import DataRoom from "./pages/DataRoom";
 import NotFound from "./pages/NotFound";
+import PitchDeckAnalysis from "./pages/PitchDeckAnalysis";
+import DueDiligence from "./pages/DueDiligence";
+import InvestorDashboard from "./pages/InvestorDashboard";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +70,30 @@ const App = () => (
             element={
               <Layout>
                 <DataRoom />
+              </Layout>
+            }
+          />
+          <Route
+            path="/pitch-deck-analysis"
+            element={
+              <Layout>
+                <PitchDeckAnalysis />
+              </Layout>
+            }
+          />
+          <Route
+            path="/due-diligence"
+            element={
+              <Layout>
+                <DueDiligence />
+              </Layout>
+            }
+          />
+          <Route
+            path="/investor-dashboard"
+            element={
+              <Layout>
+                <InvestorDashboard />
               </Layout>
             }
           />

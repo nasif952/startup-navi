@@ -10,7 +10,10 @@ import {
   FileText, 
   FolderClosed, 
   Menu, 
-  X
+  X,
+  FilePresentation,
+  ClipboardCheck,
+  PieChart
 } from 'lucide-react';
 
 const navItems = [
@@ -20,6 +23,9 @@ const navItems = [
   { name: 'Performance', path: '/performance', icon: BarChart3 },
   { name: 'Cap Table', path: '/cap-table', icon: Users },
   { name: 'Data Room', path: '/data-room', icon: FolderClosed },
+  { name: 'Pitch Deck Analysis', path: '/pitch-deck-analysis', icon: FilePresentation },
+  { name: 'Due Diligence', path: '/due-diligence', icon: ClipboardCheck },
+  { name: 'Investor Dashboard', path: '/investor-dashboard', icon: PieChart },
 ];
 
 export function SidebarNav() {
