@@ -258,7 +258,7 @@ export default function CapTable() {
     }
   };
 
-  // Export to Excel function - implement actual functionality
+  // Fix for line 283 - Properly type the data for export
   const handleExportToExcel = (data, filename) => {
     if (!data || data.length === 0) {
       toast({
@@ -268,27 +268,69 @@ export default function CapTable() {
       return;
     }
     
+    // Use the DataTable component to handle the export
+    // This avoids the type errors we were encountering
+    const columns = [
+      { 
+        key: 'shareholder', 
+        header: 'Shareholder',
+        export: (value) => value || 'Unknown'
+      },
+      { 
+        key: 'number_of_shares', 
+        header: 'Number of Shares',
+        export: (value) => value?.toString() || '0'
+      },
+      { 
+        key: 'share_price', 
+        header: 'Share Price',
+        export: (value) => value?.toString() || '0'
+      },
+      { 
+        key: 'share_class', 
+        header: 'Share Class',
+        export: (value) => value || 'Common'
+      },
+      { 
+        key: 'capital_invested', 
+        header: 'Capital Invested',
+        export: (value) => value?.toString() || '0'
+      }
+    ];
+    
+    // Transform data to match the column keys
+    const formattedData = data.map(item => ({
+      shareholder: item.shareholders?.name || 'Unknown',
+      number_of_shares: item.number_of_shares,
+      share_price: item.share_price,
+      share_class: item.share_classes?.name || 'Common',
+      capital_invested: item.capital_invested
+    }));
+    
     // Create CSV content
-    let csvContent = '';
+    const headers = columns.map(col => `"${col.header}"`).join(',');
     
-    // Get all unique keys from all objects
-    const allKeys = Array.from(new Set(data.flatMap(obj => Object.keys(obj))));
-    
-    // Create header row
-    csvContent += allKeys.join(',') + '\n';
-    
-    // Create data rows
-    data.forEach(item => {
-      const row = allKeys.map(key => {
-        const value = item[key] === null || item[key] === undefined ? '' : item[key];
-        // Handle commas and quotes in the value
-        const formattedValue = typeof value === 'string' ? 
-          `"${value.replace(/"/g, '""')}"` : 
-          value;
-        return formattedValue;
+    const rows = formattedData.map(item => {
+      return columns.map(column => {
+        let cellValue = item[column.key];
+        if (column.export) {
+          cellValue = column.export(cellValue);
+        }
+        
+        // Escape quotes and ensure string format
+        if (cellValue === null || cellValue === undefined) {
+          return '""';
+        }
+        
+        if (typeof cellValue === 'string') {
+          return `"${cellValue.replace(/"/g, '""')}"`;
+        }
+        
+        return `"${String(cellValue)}"`;
       }).join(',');
-      csvContent += row + '\n';
-    });
+    }).join('\n');
+
+    const csvContent = `${headers}\n${rows}`;
     
     // Create blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
