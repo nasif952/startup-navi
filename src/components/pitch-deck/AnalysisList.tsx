@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +37,9 @@ export function AnalysisList() {
           title: item.title || 'Untitled Analysis',
           status: item.status || 'unknown',
           upload_date: item.upload_date,
-          overall_score: item.analysis && typeof item.analysis === 'object' ? (item.analysis as any).overallScore : null,
+          overall_score: item.analysis && typeof item.analysis === 'object' ? 
+            (item.analysis as { overallScore?: number }).overallScore || null : 
+            null,
         }));
         
         setAnalyses(formattedData);

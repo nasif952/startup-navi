@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,8 +14,28 @@ export function UploadPitchDeck() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Check authentication status on component mount
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
+    };
+    
+    checkAuth();
+    
+    // Listen for authentication changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -49,6 +70,15 @@ export function UploadPitchDeck() {
       toast({
         title: "No file selected",
         description: "Please select a file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to upload files.",
         variant: "destructive",
       });
       return;
@@ -184,6 +214,11 @@ export function UploadPitchDeck() {
                   )}
                 </Button>
               </div>
+              {!isAuthenticated && (
+                <p className="text-sm text-red-500 mt-2">
+                  Please log in to upload and analyze pitch decks.
+                </p>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center space-y-4">
@@ -198,6 +233,11 @@ export function UploadPitchDeck() {
                 <p className="text-xs text-muted-foreground">
                   PDF format only (Max 10MB)
                 </p>
+                {!isAuthenticated && (
+                  <p className="text-sm text-red-500">
+                    Please log in to upload and analyze pitch decks.
+                  </p>
+                )}
               </div>
               <Input
                 type="file"
