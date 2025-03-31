@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Card,
   CardContent,
@@ -60,12 +60,30 @@ export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        const response = await fetch(`/api/pitch-deck-analysis/${analysisId}`);
-        if (!response.ok) {
+        const { data, error } = await supabase
+          .from('pitch_deck_analyses')
+          .select('*')
+          .eq('id', analysisId)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching analysis from Supabase:', error);
           throw new Error('Failed to fetch analysis');
         }
-        const data = await response.json();
-        setAnalysis(data);
+        
+        if (!data) {
+          throw new Error('Analysis not found');
+        }
+
+        const analysisData: AnalysisData = {
+          id: data.id,
+          title: data.title || 'Untitled Analysis',
+          status: data.status,
+          upload_date: data.upload_date,
+          analysis: data.analysis
+        };
+        
+        setAnalysis(analysisData);
       } catch (error) {
         console.error('Error fetching analysis:', error);
         toast({
@@ -140,6 +158,56 @@ export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
   const formatMetricName = (name: string) => {
     return name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
   };
+
+  if (analysis.status === 'failed') {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Analysis Failed</CardTitle>
+          <CardDescription>There was a problem analyzing your pitch deck</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8">
+            <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" />
+            <p>The analysis process encountered an error. Please try uploading your pitch deck again.</p>
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="mt-4 rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+              >
+                Go Back
+              </button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!analysis.analysis) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Incomplete Analysis</CardTitle>
+          <CardDescription>The analysis results are incomplete</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8">
+            <AlertCircle className="h-16 w-16 text-amber-500 mb-4" />
+            <p>The analysis results appear to be incomplete. Please try uploading your pitch deck again.</p>
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="mt-4 rounded bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+              >
+                Go Back
+              </button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
