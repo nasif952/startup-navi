@@ -15,7 +15,18 @@ serve(async (req) => {
   }
 
   try {
-    const { fileId } = await req.json();
+    // Parse the request body or handle empty body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request body" }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { fileId } = body;
     
     if (!fileId) {
       return new Response(
@@ -129,27 +140,90 @@ serve(async (req) => {
     }
     `;
 
-    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You are a venture capital expert who analyzes startup pitch decks.' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-      }),
-    });
+    try {
+      const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You are a venture capital expert who analyzes startup pitch decks.' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+        }),
+      });
 
-    const openAIData = await openAIResponse.json();
-    console.log("OpenAI response received:", openAIData);
-    
-    if (openAIData.error) {
-      console.error("OpenAI API error:", openAIData.error);
+      if (!openAIResponse.ok) {
+        const errorData = await openAIResponse.text();
+        console.error("OpenAI API error:", errorData);
+        
+        // Update analysis status to failed
+        await supabase
+          .from('pitch_deck_analyses')
+          .update({ status: 'failed' })
+          .eq('id', analysis.id);
+          
+        return new Response(
+          JSON.stringify({ error: "AI analysis failed", details: errorData }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const openAIData = await openAIResponse.json();
+      console.log("OpenAI response received:", openAIData);
+      
+      if (openAIData.error) {
+        console.error("OpenAI API error:", openAIData.error);
+        // Update analysis status to failed
+        await supabase
+          .from('pitch_deck_analyses')
+          .update({ status: 'failed' })
+          .eq('id', analysis.id);
+          
+        return new Response(
+          JSON.stringify({ error: "AI analysis failed", details: openAIData.error }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const analysisResult = JSON.parse(openAIData.choices[0].message.content);
+
+      // Update the analysis record with the results
+      await supabase
+        .from('pitch_deck_analyses')
+        .update({ 
+          analysis: analysisResult,
+          status: 'completed'
+        })
+        .eq('id', analysis.id);
+
+      // Add metrics to the pitch_deck_metrics table
+      const metricsToInsert = Object.entries(analysisResult.metrics).map(([key, value]) => ({
+        analysis_id: analysis.id,
+        metric_name: key,
+        score: value.score,
+        feedback: value.feedback
+      }));
+
+      await supabase.from('pitch_deck_metrics').insert(metricsToInsert);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          analysis: {
+            id: analysis.id,
+            result: analysisResult
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error("Error calling OpenAI:", error);
+      
       // Update analysis status to failed
       await supabase
         .from('pitch_deck_analyses')
@@ -157,42 +231,10 @@ serve(async (req) => {
         .eq('id', analysis.id);
         
       return new Response(
-        JSON.stringify({ error: "AI analysis failed", details: openAIData.error }),
+        JSON.stringify({ error: "Failed to analyze with AI", details: error.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    const analysisResult = JSON.parse(openAIData.choices[0].message.content);
-
-    // Update the analysis record with the results
-    await supabase
-      .from('pitch_deck_analyses')
-      .update({ 
-        analysis: analysisResult,
-        status: 'completed'
-      })
-      .eq('id', analysis.id);
-
-    // Add metrics to the pitch_deck_metrics table
-    const metricsToInsert = Object.entries(analysisResult.metrics).map(([key, value]) => ({
-      analysis_id: analysis.id,
-      metric_name: key,
-      score: value.score,
-      feedback: value.feedback
-    }));
-
-    await supabase.from('pitch_deck_metrics').insert(metricsToInsert);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        analysis: {
-          id: analysis.id,
-          result: analysisResult
-        }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error) {
     console.error("Error in analyze-pitch-deck function:", error);

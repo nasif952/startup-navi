@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { v4 as uuidv4 } from 'uuid'; // Fixed import of uuid
+import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,7 +91,7 @@ export function UploadPitchDeck() {
       // Generate unique storage path using the imported uuid function
       const filePath = `${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
       
-      // Upload file to storage without onUploadProgress
+      // Upload file to storage
       const { data: storageData, error: storageError } = await supabase
         .storage
         .from('pitch-decks')
@@ -130,33 +130,33 @@ export function UploadPitchDeck() {
       setUploading(false);
       setAnalyzing(true);
 
-      // Get the current session token
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token || '';
+      try {
+        // Call the Supabase edge function directly using supabase client
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-pitch-deck', {
+          body: JSON.stringify({ fileId: fileData.id }),
+        });
+        
+        if (analysisError) {
+          throw new Error(analysisError.message || 'Failed to analyze pitch deck');
+        }
 
-      const analysisResponse = await fetch(`${window.location.origin}/functions/v1/analyze-pitch-deck`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ fileId: fileData.id }),
-      });
-
-      if (!analysisResponse.ok) {
-        const errorData = await analysisResponse.json();
-        throw new Error(errorData.error || 'Failed to analyze pitch deck');
+        toast({
+          title: "Analysis complete",
+          description: "Your pitch deck has been analyzed successfully.",
+        });
+        
+        // Redirect to analysis results page
+        navigate(`/pitch-deck-analysis/${analysisData.analysis.id}`);
+      } catch (analysisError) {
+        console.error('Analysis error:', analysisError);
+        toast({
+          title: "Analysis failed",
+          description: analysisError instanceof Error ? analysisError.message : "Failed to analyze the pitch deck",
+          variant: "destructive",
+        });
+        // Even if analysis fails, don't prevent the user from seeing previous analyses
+        navigate('/pitch-deck-analysis');
       }
-
-      const analysisData = await analysisResponse.json();
-      
-      toast({
-        title: "Analysis complete",
-        description: "Your pitch deck has been analyzed successfully.",
-      });
-      
-      // Redirect to analysis results page
-      navigate(`/pitch-deck-analysis/${analysisData.analysis.id}`);
       
     } catch (error) {
       console.error('Upload error:', error);
