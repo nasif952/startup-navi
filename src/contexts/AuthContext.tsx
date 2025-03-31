@@ -56,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      // Use a more generic query approach that works with tables not in TypeScript definitions yet
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
