@@ -75,12 +75,28 @@ export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
           throw new Error('Analysis not found');
         }
 
+        let parsedAnalysis: AnalysisResult;
+        
+        if (typeof data.analysis === 'string') {
+          try {
+            parsedAnalysis = JSON.parse(data.analysis);
+          } catch (parseError) {
+            console.error('Error parsing analysis JSON:', parseError);
+            throw new Error('Invalid analysis data format');
+          }
+        } else if (data.analysis && typeof data.analysis === 'object') {
+          parsedAnalysis = data.analysis as AnalysisResult;
+        } else {
+          console.error('Unexpected analysis data type:', typeof data.analysis);
+          throw new Error('Invalid analysis data type');
+        }
+
         const analysisData: AnalysisData = {
           id: data.id,
           title: data.title || 'Untitled Analysis',
           status: data.status,
           upload_date: data.upload_date,
-          analysis: data.analysis
+          analysis: parsedAnalysis
         };
         
         setAnalysis(analysisData);
@@ -159,7 +175,7 @@ export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
     return name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
   };
 
-  if (analysis.status === 'failed') {
+  if (analysis?.status === 'failed') {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -184,7 +200,7 @@ export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
     );
   }
 
-  if (!analysis.analysis) {
+  if (!analysis?.analysis) {
     return (
       <Card className="w-full">
         <CardHeader>
