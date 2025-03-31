@@ -150,7 +150,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: 'You are a venture capital expert who analyzes startup pitch decks.' },
+            { role: 'system', content: 'You are a venture capital expert who analyzes startup pitch decks. Respond with JSON only, no markdown.' },
             { role: 'user', content: prompt }
           ],
           temperature: 0.7,
@@ -190,7 +190,35 @@ serve(async (req) => {
         );
       }
       
-      const analysisResult = JSON.parse(openAIData.choices[0].message.content);
+      // Get the raw content from OpenAI response
+      let responseContent = openAIData.choices[0].message.content;
+      
+      // Extract JSON from the content if wrapped in markdown code blocks
+      if (responseContent.includes('```json')) {
+        responseContent = responseContent.replace(/```json\n|\n```/g, '');
+      } else if (responseContent.includes('```')) {
+        responseContent = responseContent.replace(/```\n|\n```/g, '');
+      }
+      
+      // Parse the JSON response
+      let analysisResult;
+      try {
+        analysisResult = JSON.parse(responseContent);
+      } catch (jsonError) {
+        console.error("Error parsing JSON from OpenAI response:", jsonError);
+        console.log("Raw response content:", responseContent);
+        
+        // Update analysis status to failed
+        await supabase
+          .from('pitch_deck_analyses')
+          .update({ status: 'failed' })
+          .eq('id', analysis.id);
+          
+        return new Response(
+          JSON.stringify({ error: "Failed to parse AI analysis result", details: jsonError.message, rawResponse: responseContent }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       // Update the analysis record with the results
       await supabase

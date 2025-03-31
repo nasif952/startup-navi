@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -131,13 +130,18 @@ export function UploadPitchDeck() {
       setAnalyzing(true);
 
       try {
-        // Call the Supabase edge function directly using supabase client
+        // Call the Supabase edge function with proper error handling
         const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-pitch-deck', {
-          body: JSON.stringify({ fileId: fileData.id }),
+          body: { fileId: fileData.id },
         });
         
         if (analysisError) {
+          console.error('Analysis error details:', analysisError);
           throw new Error(analysisError.message || 'Failed to analyze pitch deck');
+        }
+        
+        if (!analysisData || !analysisData.analysis || !analysisData.analysis.id) {
+          throw new Error('Invalid response from analysis function');
         }
 
         toast({

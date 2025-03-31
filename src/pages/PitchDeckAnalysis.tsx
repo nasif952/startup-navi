@@ -17,6 +17,24 @@ export default function PitchDeckAnalysis() {
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("upload");
+  
+  // Listen for errors from the edge function
+  useEffect(() => {
+    const errorParams = new URLSearchParams(window.location.search);
+    const errorMessage = errorParams.get('error');
+    
+    if (errorMessage) {
+      toast({
+        title: "Analysis failed",
+        description: errorMessage || "An error occurred during analysis",
+        variant: "destructive",
+      });
+      
+      // Clean the URL
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  }, [toast]);
 
   // Redirect unauthenticated users after auth check completes
   useEffect(() => {
