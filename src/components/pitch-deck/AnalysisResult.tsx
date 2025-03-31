@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +18,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { AlertCircle, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Json } from '@/integrations/supabase/types';
 
 interface Metric {
   score: number;
@@ -52,6 +54,19 @@ interface AnalysisResultProps {
   onBack?: () => void;
 }
 
+// Function to validate if an object conforms to the AnalysisResult interface
+function isValidAnalysisResult(obj: any): obj is AnalysisResult {
+  return (
+    obj &&
+    typeof obj === 'object' &&
+    typeof obj.overallScore === 'number' &&
+    Array.isArray(obj.strengths) &&
+    Array.isArray(obj.weaknesses) &&
+    typeof obj.metrics === 'object' &&
+    Array.isArray(obj.recommendations)
+  );
+}
+
 export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,16 +92,33 @@ export function AnalysisResult({ analysisId, onBack }: AnalysisResultProps) {
 
         let parsedAnalysis: AnalysisResult;
         
+        // Handle string format (JSON string)
         if (typeof data.analysis === 'string') {
           try {
-            parsedAnalysis = JSON.parse(data.analysis);
+            const parsed = JSON.parse(data.analysis);
+            if (!isValidAnalysisResult(parsed)) {
+              throw new Error('Invalid analysis result structure');
+            }
+            parsedAnalysis = parsed;
           } catch (parseError) {
             console.error('Error parsing analysis JSON:', parseError);
             throw new Error('Invalid analysis data format');
           }
-        } else if (data.analysis && typeof data.analysis === 'object') {
-          parsedAnalysis = data.analysis as AnalysisResult;
-        } else {
+        } 
+        // Handle object format
+        else if (data.analysis && typeof data.analysis === 'object') {
+          // First cast to unknown, then check if it's a valid AnalysisResult
+          const analysisObj = data.analysis as unknown;
+          
+          if (!isValidAnalysisResult(analysisObj)) {
+            console.error('Analysis object does not match expected structure:', data.analysis);
+            throw new Error('Invalid analysis data structure');
+          }
+          
+          parsedAnalysis = analysisObj;
+        } 
+        // Handle any other unexpected format
+        else {
           console.error('Unexpected analysis data type:', typeof data.analysis);
           throw new Error('Invalid analysis data type');
         }
