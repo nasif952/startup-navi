@@ -1,9 +1,42 @@
 
 import { useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, LogOut, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from '@/components/ui/button';
 
 export function TopBar() {
   const [showNotifications, setShowNotifications] = useState(false);
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const handleLogin = () => {
+    navigate('/auth');
+  };
+
+  // Get user initials or default to "N"
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ')
+        .map((name: string) => name[0])
+        .join('')
+        .toUpperCase();
+    }
+    return user ? user.email?.[0].toUpperCase() : 'N';
+  };
 
   return (
     <div className="h-16 bg-white border-b border-border flex items-center justify-between px-4 shadow-sm">
@@ -32,16 +65,40 @@ export function TopBar() {
           )}
         </div>
 
-        <button className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md hover:bg-destructive/90 transition-colors duration-200">
+        <Button className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md hover:bg-destructive/90 transition-colors duration-200">
           Upgrade Now
-        </button>
+        </Button>
 
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
-            N
-          </div>
-          <span className="font-medium hidden sm:block">NASIF AHMED</span>
-        </div>
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center space-x-3 cursor-pointer">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+                  {getInitials()}
+                </div>
+                <span className="font-medium hidden sm:block">
+                  {profile?.full_name || user.email}
+                </span>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button onClick={handleLogin}>
+            Log In
+          </Button>
+        )}
       </div>
     </div>
   );

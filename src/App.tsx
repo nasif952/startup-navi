@@ -4,7 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "./components/Layout";
+import AuthGuard from "./components/AuthGuard";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Valuation from "./pages/Valuation";
 import FinancialOverview from "./pages/FinancialOverview";
@@ -21,85 +24,116 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Layout>
-                <Dashboard />
-              </Layout>
-            }
-          />
-          <Route
-            path="/valuation"
-            element={
-              <Layout>
-                <Valuation />
-              </Layout>
-            }
-          />
-          <Route
-            path="/financial-overview"
-            element={
-              <Layout>
-                <FinancialOverview />
-              </Layout>
-            }
-          />
-          <Route
-            path="/performance"
-            element={
-              <Layout>
-                <Performance />
-              </Layout>
-            }
-          />
-          <Route
-            path="/cap-table"
-            element={
-              <Layout>
-                <CapTable />
-              </Layout>
-            }
-          />
-          <Route
-            path="/data-room"
-            element={
-              <Layout>
-                <DataRoom />
-              </Layout>
-            }
-          />
-          <Route
-            path="/pitch-deck-analysis"
-            element={
-              <Layout>
-                <PitchDeckAnalysis />
-              </Layout>
-            }
-          />
-          <Route
-            path="/due-diligence"
-            element={
-              <Layout>
-                <DueDiligence />
-              </Layout>
-            }
-          />
-          <Route
-            path="/investor-dashboard"
-            element={
-              <Layout>
-                <InvestorDashboard />
-              </Layout>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/valuation"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <Valuation />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/financial-overview"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <FinancialOverview />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/performance"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <Performance />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/cap-table"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <CapTable />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/data-room"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <DataRoom />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/pitch-deck-analysis"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <PitchDeckAnalysis />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/pitch-deck-analysis/:analysisId"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <PitchDeckAnalysis />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/due-diligence"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <DueDiligence />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/investor-dashboard"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <InvestorDashboard />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
