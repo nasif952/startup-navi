@@ -1,4 +1,162 @@
 
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/Card';
+import { DataTable } from '@/components/DataTable';
+import { Check, X, Eye } from 'lucide-react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+
+// Define the PerformanceHistoryItem interface
+interface PerformanceHistoryItem {
+  id: string;
+  month: number;
+  year: number;
+  createdOn: string;
+  updatedOn: string;
+  status: boolean;
+}
+
+// Define the MetricData interface for chart data
+interface MetricData {
+  id: string;
+  name: string;
+  data: Array<{
+    month: string;
+    value: number;
+  }>;
+}
+
+// Type guard function to check if the data is a MetricData array
+function isMetricDataArray(data: unknown): data is MetricData[] {
+  return Array.isArray(data) && data.length > 0 && 'name' in data[0] && 'data' in data[0];
+}
+
+// Helper function to convert month number to name
+function getMonthName(monthNum: number): string {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return months[monthNum - 1] || '';
+}
+
+export function PerformanceTab() {
+  const [activePerformanceTab, setActivePerformanceTab] = useState('selectMetrics');
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
+  const [chartData, setChartData] = useState<unknown>([]);
+  const [performanceHistory, setPerformanceHistory] = useState<PerformanceHistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Mock data - in a real app, this would be fetched from an API
+    const fetchData = async () => {
+      setIsLoading(true);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      if (activePerformanceTab === 'selectMetrics') {
+        // Data for individual metrics
+        const metricsData: MetricData[] = [
+          {
+            id: '1',
+            name: 'Revenue',
+            data: [
+              { month: 'Jan', value: 5000 },
+              { month: 'Feb', value: 7000 },
+              { month: 'Mar', value: 6500 },
+              { month: 'Apr', value: 9000 },
+              { month: 'May', value: 11000 },
+              { month: 'Jun', value: 12000 },
+            ]
+          },
+          {
+            id: '2',
+            name: 'GrossMargin',
+            data: [
+              { month: 'Jan', value: 45 },
+              { month: 'Feb', value: 48 },
+              { month: 'Mar', value: 50 },
+              { month: 'Apr', value: 52 },
+              { month: 'May', value: 55 },
+              { month: 'Jun', value: 58 },
+            ]
+          },
+          {
+            id: '3',
+            name: 'Customers',
+            data: [
+              { month: 'Jan', value: 50 },
+              { month: 'Feb', value: 65 },
+              { month: 'Mar', value: 75 },
+              { month: 'Apr', value: 90 },
+              { month: 'May', value: 100 },
+              { month: 'Jun', value: 115 },
+            ]
+          },
+          {
+            id: '4',
+            name: 'CAC',
+            data: [
+              { month: 'Jan', value: 80 },
+              { month: 'Feb', value: 75 },
+              { month: 'Mar', value: 72 },
+              { month: 'Apr', value: 68 },
+              { month: 'May', value: 65 },
+              { month: 'Jun', value: 62 },
+            ]
+          },
+          {
+            id: '5',
+            name: 'Runway',
+            data: [
+              { month: 'Jan', value: 9 },
+              { month: 'Feb', value: 10 },
+              { month: 'Mar', value: 11 },
+              { month: 'Apr', value: 12 },
+              { month: 'May', value: 14 },
+              { month: 'Jun', value: 16 },
+            ]
+          }
+        ];
+        
+        setChartData(metricsData);
+      } else {
+        // Combined data for other tabs
+        const combinedData = [
+          { month: 'Jan', revenue: 5000, margin: 45, customers: 50 },
+          { month: 'Feb', revenue: 7000, margin: 48, customers: 65 },
+          { month: 'Mar', revenue: 6500, margin: 50, customers: 75 },
+          { month: 'Apr', revenue: 9000, margin: 52, customers: 90 },
+          { month: 'May', revenue: 11000, margin: 55, customers: 100 },
+          { month: 'Jun', revenue: 12000, margin: 58, customers: 115 },
+        ];
+        
+        setChartData(combinedData);
+      }
+      
+      // Mock history data
+      const historyData: PerformanceHistoryItem[] = [
+        { id: '1', month: 6, year: 2023, createdOn: '2023-06-15', updatedOn: '2023-06-20', status: true },
+        { id: '2', month: 5, year: 2023, createdOn: '2023-05-12', updatedOn: '2023-05-18', status: true },
+        { id: '3', month: 4, year: 2023, createdOn: '2023-04-10', updatedOn: '2023-04-15', status: true },
+        { id: '4', month: 3, year: 2023, createdOn: '2023-03-08', updatedOn: '2023-03-14', status: false }
+      ];
+      
+      setPerformanceHistory(historyData);
+      setIsLoading(false);
+    };
+    
+    fetchData();
+  }, [activePerformanceTab]);
+  
+  // Handler for details view
+  const handleViewDetails = (id: string) => {
+    console.log('View details for:', id);
+    // Implementation would go here - show modal, navigate to details page, etc.
+  };
+  
   const renderChartContent = () => {
     if (activePerformanceTab === 'selectMetrics') {
       const availableMetrics = [
@@ -69,7 +227,7 @@
       // For monthly, 2025, and both tabs
       return (
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
+          <LineChart data={chartData as any[]}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis />
