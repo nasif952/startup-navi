@@ -10,14 +10,6 @@ export function getStepTitle(stepNumber: number): string | null {
 }
 
 /**
- * Checks if all required questions in a questionnaire have been answered
- */
-export function areAllQuestionsAnswered(questions: any[]): boolean {
-  if (!questions || questions.length === 0) return false;
-  return questions.every(q => q.response && q.response.trim() !== '');
-}
-
-/**
  * Creates the steps array for StepProgress component
  */
 export function createStepsArray(totalSteps: number, currentStep: number): Array<{number: number, label: string, isActive: boolean}> {
