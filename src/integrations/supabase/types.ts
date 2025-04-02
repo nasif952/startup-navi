@@ -219,6 +219,36 @@ export type Database = {
         }
         Relationships: []
       }
+      industry_benchmarks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          industry: string
+          metric: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry: string
+          metric: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string
+          metric?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       investments: {
         Row: {
           capital_invested: number
@@ -658,6 +688,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      startup_scores: {
+        Row: {
+          calculation_date: string
+          company_id: string | null
+          created_at: string
+          finance_score: number
+          growth_score: number
+          id: string
+          market_score: number
+          product_score: number
+          team_score: number
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          calculation_date?: string
+          company_id?: string | null
+          created_at?: string
+          finance_score?: number
+          growth_score?: number
+          id?: string
+          market_score?: number
+          product_score?: number
+          team_score?: number
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          calculation_date?: string
+          company_id?: string | null
+          created_at?: string
+          finance_score?: number
+          growth_score?: number
+          id?: string
+          market_score?: number
+          product_score?: number
+          team_score?: number
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "startup_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       valuations: {
         Row: {
