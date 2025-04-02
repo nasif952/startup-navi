@@ -9,13 +9,23 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/formatters';
 
+interface Shareholder {
+  id: string;
+  name: string;
+}
+
+interface ShareClass {
+  id: string;
+  name: string;
+}
+
 interface Investment {
   id: string;
   capital_invested: number;
   number_of_shares: number;
   share_price: number;
-  shareholders?: { id: string; name: string };
-  share_classes?: { id: string; name: string };
+  shareholders?: Shareholder;
+  share_classes?: ShareClass;
 }
 
 interface InvestmentPortfolioProps {

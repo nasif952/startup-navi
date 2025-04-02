@@ -11,8 +11,12 @@ import { formatCurrency } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 
 interface RoundSummary {
+  id: string;
+  round_id: string;
   total_capital: number;
   total_shares: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface FundingRound {
@@ -21,7 +25,7 @@ interface FundingRound {
   date: string;
   valuation: number;
   is_foundation: boolean;
-  round_summaries?: RoundSummary;
+  round_summaries?: RoundSummary[];
 }
 
 interface FundingRoundsProps {
@@ -65,30 +69,41 @@ export function FundingRounds({ rounds, isLoading }: FundingRoundsProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedRounds.map((round) => (
-            <TableRow key={round.id}>
-              <TableCell className="font-medium">{round.name}</TableCell>
-              <TableCell>
-                {new Date(round.date).toLocaleDateString()}
-              </TableCell>
-              <TableCell>
-                {formatCurrency(round.valuation)}
-              </TableCell>
-              <TableCell>
-                {formatCurrency(round.round_summaries?.total_capital || 0)}
-              </TableCell>
-              <TableCell>
-                {(round.round_summaries?.total_shares || 0).toLocaleString()}
-              </TableCell>
-              <TableCell className="text-right">
-                {round.is_foundation ? (
-                  <Badge variant="secondary">Foundation</Badge>
-                ) : (
-                  <Badge>Funding</Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
+          {sortedRounds.map((round) => {
+            // Get the total capital and shares from the first round summary
+            // If there's no round summary or it's empty, default to 0
+            const totalCapital = round.round_summaries && round.round_summaries.length > 0
+              ? round.round_summaries[0].total_capital 
+              : 0;
+            const totalShares = round.round_summaries && round.round_summaries.length > 0
+              ? round.round_summaries[0].total_shares
+              : 0;
+              
+            return (
+              <TableRow key={round.id}>
+                <TableCell className="font-medium">{round.name}</TableCell>
+                <TableCell>
+                  {new Date(round.date).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  {formatCurrency(round.valuation)}
+                </TableCell>
+                <TableCell>
+                  {formatCurrency(totalCapital)}
+                </TableCell>
+                <TableCell>
+                  {totalShares.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right">
+                  {round.is_foundation ? (
+                    <Badge variant="secondary">Foundation</Badge>
+                  ) : (
+                    <Badge>Funding</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

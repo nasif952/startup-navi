@@ -1,12 +1,10 @@
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { BarChart3, PieChart, TrendingUp, DollarSign, Users, Briefcase, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, formatPercentage } from '@/lib/formatters';
+import { formatCurrency } from '@/lib/formatters';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InvestmentPortfolio } from '@/components/investor/InvestmentPortfolio';
 import { InvestmentMetrics } from '@/components/investor/InvestmentMetrics';
