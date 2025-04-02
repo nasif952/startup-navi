@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -38,40 +37,6 @@ export function UploadPitchDeck() {
       subscription.unsubscribe();
     };
   }, []);
-
-  // Ensure the storage bucket exists when component mounts
-  useEffect(() => {
-    const ensureStorageBucketExists = async () => {
-      try {
-        // First check if bucket exists
-        const { data: buckets, error } = await supabase.storage.listBuckets();
-        const bucketExists = buckets?.some(bucket => bucket.name === 'pitch-decks');
-        
-        if (!bucketExists) {
-          console.log('Pitch-decks bucket does not exist, creating it');
-          const { data, error: createError } = await supabase.storage.createBucket('pitch-decks', {
-            public: false,
-            allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-            fileSizeLimit: 10485760 // 10MB
-          });
-          
-          if (createError) {
-            console.error('Error creating storage bucket:', createError);
-            // Don't set an error here as we'll try again during upload if needed
-          } else {
-            console.log('Successfully created pitch-decks bucket');
-          }
-        }
-      } catch (err) {
-        console.error('Error checking/creating storage bucket:', err);
-        // Don't set an error here as we'll try again during upload if needed
-      }
-    };
-
-    if (isAuthenticated) {
-      ensureStorageBucketExists();
-    }
-  }, [isAuthenticated]);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -154,42 +119,22 @@ export function UploadPitchDeck() {
       // Generate storage path with sanitized filename
       const filePath = `${fileUuid}.${fileExtension}`;
       
-      // Ensure bucket exists before uploading
+      // First, check if the user can access the storage
       try {
-        // First check if bucket exists
-        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-        
-        if (listError) {
-          console.error("Error listing buckets:", listError);
-          throw new Error("Failed to check storage buckets");
-        }
-        
-        const bucketExists = buckets?.some(bucket => bucket.name === 'pitch-decks');
-        
-        if (!bucketExists) {
-          console.log('Creating pitch-decks bucket before upload');
-          const { error: createError } = await supabase.storage.createBucket('pitch-decks', {
-            public: false,
-            allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-            fileSizeLimit: 10485760 // 10MB
-          });
+        // Try to list files to verify storage access
+        const { error: storageCheckError } = await supabase
+          .storage
+          .from('pitch-decks')
+          .list();
           
-          if (createError) {
-            console.error("Error creating bucket:", createError);
-            throw new Error("Failed to create storage bucket");
-          }
+        if (storageCheckError) {
+          // If we can't list files, the bucket might not exist
+          // Instead of creating it from the client side, we'll let the edge function handle it
+          console.log('Could not access the pitch-decks bucket. The edge function will handle bucket creation if needed.');
         }
-      } catch (bucketError) {
-        console.error('Bucket error:', bucketError);
-        stopProgressSimulation();
-        setUploading(false);
-        setError("Failed to access storage. Please try again later.");
-        toast({
-          title: "Storage access failed",
-          description: "Could not access the storage bucket. Please try again later.",
-          variant: "destructive",
-        });
-        return;
+      } catch (accessError) {
+        console.log('Storage access check failed:', accessError);
+        // Continue with upload - the edge function will handle bucket creation
       }
       
       // Upload file to storage
@@ -206,7 +151,14 @@ export function UploadPitchDeck() {
       if (storageError) {
         console.error('Storage error:', storageError);
         setUploadProgress(0);
-        throw new Error(storageError.message || "Failed to upload file");
+        
+        if (storageError.message.includes('storage/bucket-not-found')) {
+          throw new Error("Storage bucket not found. Please contact support.");
+        } else if (storageError.message.includes('row-level security policy')) {
+          throw new Error("You don't have permission to upload files. Please check your login status.");
+        } else {
+          throw new Error(storageError.message || "Failed to upload file");
+        }
       }
 
       setUploadProgress(100);

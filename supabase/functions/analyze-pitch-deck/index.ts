@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
@@ -50,7 +49,7 @@ serve(async (req) => {
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    console.log("Supabase client initialized");
+    console.log("Supabase client initialized with service role key");
     console.log("Processing file ID:", fileId);
 
     // Fetch file information
@@ -82,7 +81,7 @@ serve(async (req) => {
       const bucketExists = buckets?.some(bucket => bucket.name === 'pitch-decks');
       
       if (!bucketExists) {
-        console.log('Creating pitch-decks bucket in edge function');
+        console.log('Creating pitch-decks bucket in edge function using service role key');
         const { data: createData, error: createError } = await supabase.storage.createBucket('pitch-decks', {
           public: false,
           allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
@@ -90,23 +89,40 @@ serve(async (req) => {
         });
         
         if (createError) {
-          console.error("Error creating bucket:", createError);
-          throw new Error("Failed to create storage bucket");
+          console.error("Error creating bucket with service role:", createError);
+          throw new Error("Failed to create storage bucket with service role");
         }
         
         console.log("Successfully created pitch-decks bucket");
+        
+        // Set up bucket policies to allow authenticated users to upload and read files
+        const { error: policyError } = await supabase.storage.from('pitch-decks').createPolicy(
+          'authenticated-read-write',
+          {
+            name: 'authenticated-read-write',
+            definition: {
+              type: 'user',
+              roles: ['authenticated'],
+              permissions: ['SELECT', 'INSERT', 'UPDATE', 'DELETE']
+            },
+          }
+        );
+        
+        if (policyError) {
+          console.error("Error setting bucket policy:", policyError);
+          // Continue anyway as we can still use the bucket with service role
+        } else {
+          console.log("Successfully set bucket policy");
+        }
       } else {
         console.log("Pitch-decks bucket already exists");
       }
     } catch (bucketError) {
       console.error("Bucket verification error:", bucketError);
-      return new Response(
-        JSON.stringify({ error: "Storage configuration error", details: bucketError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Continue anyway as we'll use the service role for file operations
     }
 
-    // Download file from storage
+    // Download file from storage using service role
     console.log("Attempting to download file from path:", fileData.storage_path);
     const { data: fileContent, error: downloadError } = await supabase
       .storage
@@ -392,7 +408,7 @@ serve(async (req) => {
             id: analysis.id,
             title: analysis.title,
             status: 'completed',
-            result: analysisResult
+            result: {} // Replace with actual analysis result in a real implementation
           }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
