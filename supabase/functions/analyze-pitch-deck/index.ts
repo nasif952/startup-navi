@@ -26,7 +26,7 @@ serve(async (req) => {
       );
     }
     
-    const { fileId } = body;
+    const { fileId, fileType } = body;
     
     if (!fileId) {
       return new Response(
@@ -67,9 +67,9 @@ serve(async (req) => {
       );
     }
 
-    // Extract text from PDF (simplified - in a real implementation you'd use a PDF parsing library)
-    // For this example, we'll simulate extracted content
-    const extractedText = `This is simulated text extraction from the pitch deck: ${fileData.name}.
+    // Extract text from file (simplified - in a real implementation you'd use a proper parsing library)
+    // For this example, we'll simulate extracted content based on file type
+    const extractedText = `This is simulated text extraction from the ${fileData.file_type === 'application/pdf' ? 'PDF' : 'PPTX'}: ${fileData.name}.
     Common pitch deck sections include:
     - Company Overview
     - Problem Statement
@@ -87,7 +87,8 @@ serve(async (req) => {
       .insert({
         file_id: fileId,
         title: fileData.name,
-        status: 'processing'
+        status: 'processing',
+        file_type: fileData.file_type
       })
       .select()
       .single();
@@ -104,7 +105,7 @@ serve(async (req) => {
     
     const prompt = `
     You are a venture capital expert analyzing a startup pitch deck. 
-    The extracted text from the pitch deck is:
+    The extracted text from the ${fileData.file_type === 'application/pdf' ? 'PDF' : 'PPTX'} pitch deck is:
     
     ${extractedText}
     

@@ -41,11 +41,12 @@ export function UploadPitchDeck() {
     const selectedFile = event.target.files?.[0];
     
     if (selectedFile) {
-      // Check if file is a PDF
-      if (selectedFile.type !== 'application/pdf') {
+      // Check if file is a PDF or PPTX
+      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+      if (!allowedTypes.includes(selectedFile.type)) {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF file.",
+          description: "Please upload a PDF or PPTX file.",
           variant: "destructive",
         });
         return;
@@ -91,13 +92,13 @@ export function UploadPitchDeck() {
       // Generate unique ID for storage
       const fileUuid = uuidv4();
       
-      // Sanitize filename by removing special characters and spaces
-      const sanitizedName = file.name
-        .replace(/[[\](){}]/g, '')
-        .replace(/\s+/g, '_');
+      // Create a very safe filename by completely removing problematic characters
+      // and using just the file extension from the original name
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || 
+        (file.type === 'application/pdf' ? 'pdf' : 'pptx');
       
       // Generate storage path with sanitized filename
-      const filePath = `${fileUuid}-${sanitizedName}`;
+      const filePath = `${fileUuid}.${fileExtension}`;
       
       // Upload file to storage
       const { data: storageData, error: storageError } = await supabase
@@ -109,6 +110,7 @@ export function UploadPitchDeck() {
         });
 
       if (storageError) {
+        console.error('Storage error:', storageError);
         throw new Error(storageError.message);
       }
 
@@ -118,7 +120,7 @@ export function UploadPitchDeck() {
         .insert({
           name: file.name,
           storage_path: filePath,
-          file_type: 'application/pdf',
+          file_type: file.type,
           file_size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
           owner: 'Current User' // In a real app, use authenticated user's information
         })
@@ -141,7 +143,10 @@ export function UploadPitchDeck() {
       try {
         // Call the Supabase edge function with proper error handling
         const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-pitch-deck', {
-          body: { fileId: fileData.id },
+          body: { 
+            fileId: fileData.id,
+            fileType: fileExtension
+          },
         });
         
         if (analysisError) {
@@ -244,7 +249,7 @@ export function UploadPitchDeck() {
                   Drag and drop or click to browse your files
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  PDF format only (Max 10MB)
+                  PDF and PPTX formats supported (Max 10MB)
                 </p>
                 {!isAuthenticated && (
                   <p className="text-sm text-red-500">
@@ -255,7 +260,7 @@ export function UploadPitchDeck() {
               <Input
                 type="file"
                 id="file-upload"
-                accept=".pdf"
+                accept=".pdf,.pptx"
                 onChange={handleFileChange}
                 className="hidden"
               />
