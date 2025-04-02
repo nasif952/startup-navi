@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      console.log("Auth state changed:", event, currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -98,7 +99,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+      }
+      // Clear local state regardless of API response
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Still clear local state on error
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+    }
   };
 
   const value = {
