@@ -9,6 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface MetricItem {
   id: string;
@@ -17,6 +24,15 @@ interface MetricItem {
   actual: string;
   unit: string;
 }
+
+// Function to get month name from month number (1-12)
+const getMonthName = (month: number): string => {
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  return monthNames[month - 1];
+};
 
 // Mock API function to simulate saving metrics to a server
 const saveMetricsToServer = async (data: any) => {
@@ -65,8 +81,8 @@ const saveMetricsToServer = async (data: any) => {
 };
 
 // Mock API function to fetch saved metrics
-const fetchSavedMetrics = async (month: string, year: string) => {
-  console.log('Fetching metrics for', month, year);
+const fetchSavedMetrics = async (month: number, year: number) => {
+  console.log('Fetching metrics for', getMonthName(month), year);
   
   // First, get all default metrics
   const { data: metricsData, error: metricsError } = await supabase
@@ -79,21 +95,12 @@ const fetchSavedMetrics = async (month: string, year: string) => {
     throw metricsError;
   }
   
-  // Map month name to number
-  const monthMap: Record<string, number> = {
-    January: 1, February: 2, March: 3, April: 4, May: 5, June: 6,
-    July: 7, August: 8, September: 9, October: 10, November: 11, December: 12
-  };
-  
-  const monthNum = monthMap[month];
-  const yearNum = parseInt(year);
-  
   // Then get values for the specific month and year
   const { data: valuesData, error: valuesError } = await supabase
     .from('performance_values')
     .select('*, performance_metrics(*)')
-    .eq('month', monthNum)
-    .eq('year', yearNum);
+    .eq('month', month)
+    .eq('year', year);
     
   if (valuesError) {
     console.error('Error fetching values:', valuesError);
@@ -124,8 +131,16 @@ const fetchSavedMetrics = async (month: string, year: string) => {
 export function DefaultMetricsTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedMonth, setSelectedMonth] = useState('March');
-  const [selectedYear, setSelectedYear] = useState('2025');
+  
+  // Get current date information
+  const currentDate = new Date();
+  const currentMonthNum = currentDate.getMonth() + 1; // 1-12
+  const currentMonth = getMonthName(currentMonthNum);
+  const currentYear = currentDate.getFullYear();
+  
+  // Set default selected month to current month
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonthNum);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [metrics, setMetrics] = useState<MetricItem[]>([
     { id: '1', name: 'Revenue', target: '', actual: '', unit: '$' },
     { id: '2', name: 'Gross Margin', target: '', actual: '', unit: '%' },
@@ -136,6 +151,36 @@ export function DefaultMetricsTab() {
   const [newMetric, setNewMetric] = useState({ name: '', unit: '' });
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [bulkData, setBulkData] = useState('');
+
+  // Generate month options (current month and 11 previous months)
+  const generateMonthOptions = () => {
+    const options = [];
+    let month = currentMonthNum;
+    let year = currentYear;
+    
+    // Include current month and 11 previous months
+    for (let i = 0; i < 12; i++) {
+      options.push({
+        value: month,
+        label: getMonthName(month),
+        year: year
+      });
+      
+      // Move to previous month
+      month--;
+      if (month === 0) {
+        month = 12;
+        year--;
+      }
+    }
+    
+    return options;
+  };
+  
+  const monthOptions = generateMonthOptions();
+  
+  // Generate year options (current year and 2 previous years)
+  const yearOptions = [currentYear, currentYear - 1, currentYear - 2];
 
   // Add function to ensure default metrics exist
   useEffect(() => {
@@ -212,7 +257,7 @@ export function DefaultMetricsTab() {
     onSuccess: () => {
       toast({
         title: "Performance metrics saved",
-        description: `Metrics for ${selectedMonth} ${selectedYear} have been updated.`
+        description: `Metrics for ${getMonthName(selectedMonth)} ${selectedYear} have been updated.`
       });
       
       // Update the cache with the new metrics
@@ -331,26 +376,39 @@ export function DefaultMetricsTab() {
         <div className="flex justify-end space-x-4 mb-4">
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Month</label>
-            <select
-              className="w-36 rounded-md border border-border p-2"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+            <Select 
+              value={selectedMonth.toString()} 
+              onValueChange={(value) => setSelectedMonth(Number(value))}
             >
-              <option>March</option>
-              <option>February</option>
-              <option>January</option>
-            </select>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder={currentMonth} />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((option) => (
+                  <SelectItem key={`${option.value}-${option.year}`} value={option.value.toString()}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Year</label>
-            <select
-              className="w-36 rounded-md border border-border p-2"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
+            <Select 
+              value={selectedYear.toString()} 
+              onValueChange={(value) => setSelectedYear(Number(value))}
             >
-              <option>2025</option>
-              <option>2024</option>
-            </select>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder={currentYear.toString()} />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
