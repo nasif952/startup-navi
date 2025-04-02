@@ -38,6 +38,40 @@ export function UploadPitchDeck() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Ensure the storage bucket exists when component mounts
+  useEffect(() => {
+    const ensureStorageBucketExists = async () => {
+      try {
+        // First check if bucket exists
+        const { data: buckets, error } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(bucket => bucket.name === 'pitch-decks');
+        
+        if (!bucketExists) {
+          console.log('Pitch-decks bucket does not exist, creating it');
+          const { data, error: createError } = await supabase.storage.createBucket('pitch-decks', {
+            public: false,
+            allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+            fileSizeLimit: 10485760 // 10MB
+          });
+          
+          if (createError) {
+            console.error('Error creating storage bucket:', createError);
+            // Don't set an error here as we'll try again during upload if needed
+          } else {
+            console.log('Successfully created pitch-decks bucket');
+          }
+        }
+      } catch (err) {
+        console.error('Error checking/creating storage bucket:', err);
+        // Don't set an error here as we'll try again during upload if needed
+      }
+    };
+
+    if (isAuthenticated) {
+      ensureStorageBucketExists();
+    }
+  }, [isAuthenticated]);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
@@ -113,27 +147,49 @@ export function UploadPitchDeck() {
       // Generate unique ID for storage
       const fileUuid = uuidv4();
       
-      // Create a very safe filename by completely removing problematic characters
-      // and using just the file extension from the original name
+      // Create a safe filename with the file extension from the original name
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || 
         (file.type === 'application/pdf' ? 'pdf' : 'pptx');
       
       // Generate storage path with sanitized filename
       const filePath = `${fileUuid}.${fileExtension}`;
       
-      // Check if storage bucket exists, create it if not
+      // Ensure bucket exists before uploading
       try {
-        const { error: bucketError } = await supabase.storage.getBucket('pitch-decks');
-        if (bucketError) {
-          if (bucketError.message.includes('does not exist')) {
-            await supabase.storage.createBucket('pitch-decks', { public: false });
-          } else {
-            throw bucketError;
+        // First check if bucket exists
+        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+        
+        if (listError) {
+          console.error("Error listing buckets:", listError);
+          throw new Error("Failed to check storage buckets");
+        }
+        
+        const bucketExists = buckets?.some(bucket => bucket.name === 'pitch-decks');
+        
+        if (!bucketExists) {
+          console.log('Creating pitch-decks bucket before upload');
+          const { error: createError } = await supabase.storage.createBucket('pitch-decks', {
+            public: false,
+            allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+            fileSizeLimit: 10485760 // 10MB
+          });
+          
+          if (createError) {
+            console.error("Error creating bucket:", createError);
+            throw new Error("Failed to create storage bucket");
           }
         }
       } catch (bucketError) {
         console.error('Bucket error:', bucketError);
-        throw new Error('Failed to access storage. Please try again later.');
+        stopProgressSimulation();
+        setUploading(false);
+        setError("Failed to access storage. Please try again later.");
+        toast({
+          title: "Storage access failed",
+          description: "Could not access the storage bucket. Please try again later.",
+          variant: "destructive",
+        });
+        return;
       }
       
       // Upload file to storage
@@ -142,16 +198,18 @@ export function UploadPitchDeck() {
         .from('pitch-decks')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // Changed from false to true to handle case where file might exist
         });
 
       stopProgressSimulation();
-      setUploadProgress(100);
       
       if (storageError) {
         console.error('Storage error:', storageError);
-        throw new Error(storageError.message);
+        setUploadProgress(0);
+        throw new Error(storageError.message || "Failed to upload file");
       }
+
+      setUploadProgress(100);
 
       // Create file record in the database
       const { data: fileData, error: fileError } = await supabase
@@ -167,7 +225,7 @@ export function UploadPitchDeck() {
         .single();
 
       if (fileError) {
-        throw new Error(fileError.message);
+        throw new Error(fileError.message || "Failed to create file record");
       }
 
       toast({
@@ -276,7 +334,7 @@ export function UploadPitchDeck() {
                 </Button>
                 <Button
                   onClick={handleUpload}
-                  disabled={uploading || analyzing}
+                  disabled={uploading || analyzing || !isAuthenticated}
                 >
                   {uploading ? (
                     <>

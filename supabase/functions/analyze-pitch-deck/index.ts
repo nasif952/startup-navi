@@ -70,32 +70,34 @@ serve(async (req) => {
 
     console.log("File data retrieved:", fileData.name, "Path:", fileData.storage_path);
 
-    // Verify the storage bucket exists
+    // Verify and create the storage bucket if it doesn't exist
     try {
-      const { data: bucketData, error: bucketError } = await supabase
-        .storage
-        .getBucket('pitch-decks');
-        
-      if (bucketError) {
-        console.error("Storage bucket error:", bucketError);
-        
-        // Try creating the bucket if it doesn't exist
-        if (bucketError.message?.includes('does not exist')) {
-          const { data: newBucket, error: createError } = await supabase
-            .storage
-            .createBucket('pitch-decks', { public: false });
-            
-          if (createError) {
-            console.error("Error creating bucket:", createError);
-            throw new Error(`Storage bucket 'pitch-decks' does not exist and could not be created`);
-          }
-          console.log("Created storage bucket 'pitch-decks'");
-        } else {
-          throw new Error(bucketError.message);
-        }
+      const { data: buckets, error: listBucketsError } = await supabase.storage.listBuckets();
+      
+      if (listBucketsError) {
+        console.error("Error listing buckets:", listBucketsError);
+        throw new Error("Failed to access storage buckets");
       }
       
-      console.log("Storage bucket verified");
+      const bucketExists = buckets?.some(bucket => bucket.name === 'pitch-decks');
+      
+      if (!bucketExists) {
+        console.log('Creating pitch-decks bucket in edge function');
+        const { data: createData, error: createError } = await supabase.storage.createBucket('pitch-decks', {
+          public: false,
+          allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+          fileSizeLimit: 10485760 // 10MB
+        });
+        
+        if (createError) {
+          console.error("Error creating bucket:", createError);
+          throw new Error("Failed to create storage bucket");
+        }
+        
+        console.log("Successfully created pitch-decks bucket");
+      } else {
+        console.log("Pitch-decks bucket already exists");
+      }
     } catch (bucketError) {
       console.error("Bucket verification error:", bucketError);
       return new Response(
@@ -360,7 +362,7 @@ serve(async (req) => {
 
       // Add metrics to the pitch_deck_metrics table
       try {
-        const metricsToInsert = Object.entries(analysisResult.metrics).map(([key, value]) => ({
+        const metricsToInsert = Object.entries(analysisResult.metrics).map(([key, value]: [string, any]) => ({
           analysis_id: analysis.id,
           metric_name: key,
           score: value.score,
