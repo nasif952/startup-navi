@@ -13,6 +13,7 @@ export function getStepTitle(stepNumber: number): string | null {
  * Checks if all required questions in a questionnaire have been answered
  */
 export function areAllQuestionsAnswered(questions: any[]): boolean {
+  if (!questions || questions.length === 0) return false;
   return questions.every(q => q.response && q.response.trim() !== '');
 }
 
@@ -28,4 +29,13 @@ export function createStepsArray(totalSteps: number, currentStep: number): Array
       isActive: stepNumber === currentStep
     };
   });
+}
+
+/**
+ * Gets business sector-specific questions for a questionnaire section
+ */
+export function getSectorSpecificQuestions(sector: string, section: number): Array<{question: string, type: string}> {
+  // This is just a placeholder for potential future enhancement
+  // You could implement industry-specific questions based on the company's sector
+  return [];
 }

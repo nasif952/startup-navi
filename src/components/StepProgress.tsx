@@ -17,19 +17,24 @@ interface StepProgressProps {
 export function StepProgress({ steps, currentStep, className }: StepProgressProps) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative">
+        {/* Horizontal line connecting all steps */}
+        <div className="absolute top-4 left-0 w-full h-0.5 bg-gray-200 -z-10" />
+        
         {steps.map((step, index) => {
-          const isCompleted = index < currentStep - 1;
-          const isActive = index === currentStep - 1;
+          const isCompleted = step.number < currentStep;
+          const isActive = step.number === currentStep;
           
           return (
             <div key={step.number} className="flex flex-col items-center relative">
               {/* Line connecting steps */}
               {index < steps.length - 1 && (
-                <div className="absolute top-4 left-1/2 w-full h-0.5 bg-gray-200">
+                <div className="absolute top-4 left-1/2 w-full h-0.5">
                   <div
-                    className="h-full bg-primary transition-all duration-500"
-                    style={{ width: isCompleted ? '100%' : '0%' }}
+                    className={cn(
+                      "h-full transition-all duration-500",
+                      isCompleted ? "bg-primary" : "bg-gray-200"
+                    )}
                   />
                 </div>
               )}

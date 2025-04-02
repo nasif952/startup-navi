@@ -11,16 +11,29 @@ import {
 import { QuestionnaireContent } from './valuation/QuestionnaireContent';
 import { ValuationContent } from './valuation/ValuationContent';
 import { HistoryContent } from './valuation/HistoryContent';
+import { Progress } from '@/components/ui/progress';
 
 export default function Valuation() {
   const [activeTab, setActiveTab] = useState('questionnaire');
   const { toast } = useToast();
-
+  
+  // Calculate days remaining in trial (mock data)
+  const daysRemaining = 62;
+  const hoursRemaining = 3;
+  const minutesRemaining = 46;
+  const secondsRemaining = 11;
+  
+  // Calculate progress percentage (for future feature)
+  const progressPercentage = 14; // Represents completion of questionnaire (1 of 7 steps)
+  
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="bg-destructive text-destructive-foreground px-4 py-3 rounded-lg flex items-center justify-between mb-6">
-        <p className="text-sm">Your Valuation Free Trial is Expiring in 62d 3h 46m 11s</p>
-        <Button variant="primary" className="bg-white text-destructive hover:bg-white/90">Upgrade Now</Button>
+      <div className="bg-destructive text-destructive-foreground px-4 py-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+        <div className="space-y-1">
+          <p className="text-sm">Your Valuation Free Trial is Expiring in {daysRemaining}d {hoursRemaining}h {minutesRemaining}m {secondsRemaining}s</p>
+          <Progress value={progressPercentage} className="h-2 w-full max-w-xs" />
+        </div>
+        <Button variant="primary" className="bg-white text-destructive hover:bg-white/90 whitespace-nowrap">Upgrade Now</Button>
       </div>
 
       <Tabs
