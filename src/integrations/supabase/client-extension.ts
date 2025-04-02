@@ -36,7 +36,11 @@ export interface Database extends SupabaseDatabase {
       startup_scores: {
         Row: StartupScore;
       };
-    }
+    };
+    Views: SupabaseDatabase['public']['Views'];
+    Functions: SupabaseDatabase['public']['Functions'];
+    Enums: SupabaseDatabase['public']['Enums'];
+    CompositeTypes: SupabaseDatabase['public']['CompositeTypes'];
   }
 }
 

@@ -1,6 +1,5 @@
 
 import { extendedSupabase } from "@/integrations/supabase/client-extension";
-import { supabase } from "@/integrations/supabase/client";
 
 interface CompanyData {
   total_employees?: number | null;
