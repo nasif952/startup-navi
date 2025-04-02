@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -87,8 +88,16 @@ export function UploadPitchDeck() {
       setUploading(true);
       setUploadProgress(0);
       
-      // Generate unique storage path using the imported uuid function
-      const filePath = `${uuidv4()}-${file.name.replace(/\s+/g, '_')}`;
+      // Generate unique ID for storage
+      const fileUuid = uuidv4();
+      
+      // Sanitize filename by removing special characters and spaces
+      const sanitizedName = file.name
+        .replace(/[[\](){}]/g, '')
+        .replace(/\s+/g, '_');
+      
+      // Generate storage path with sanitized filename
+      const filePath = `${fileUuid}-${sanitizedName}`;
       
       // Upload file to storage
       const { data: storageData, error: storageError } = await supabase
