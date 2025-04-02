@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -6,8 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Upload, CheckCircle, AlertCircle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Loader2, Upload, CheckCircle } from 'lucide-react';
 
 export function UploadPitchDeck() {
   const [file, setFile] = useState<File | null>(null);
@@ -15,7 +15,6 @@ export function UploadPitchDeck() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -39,7 +38,6 @@ export function UploadPitchDeck() {
   }, []);
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null);
     const selectedFile = event.target.files?.[0];
     
     if (selectedFile) {
@@ -68,20 +66,6 @@ export function UploadPitchDeck() {
     }
   };
 
-  const simulateProgress = () => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.floor(Math.random() * 10) + 5;
-      if (progress > 95) {
-        progress = 95; // Cap at 95% until upload actually completes
-        clearInterval(interval);
-      }
-      setUploadProgress(progress);
-    }, 500);
-    
-    return () => clearInterval(interval);
-  };
-
   const handleUpload = async () => {
     if (!file) {
       toast({
@@ -102,40 +86,19 @@ export function UploadPitchDeck() {
     }
 
     try {
-      setError(null);
       setUploading(true);
       setUploadProgress(0);
-      
-      // Start progress simulation
-      const stopProgressSimulation = simulateProgress();
       
       // Generate unique ID for storage
       const fileUuid = uuidv4();
       
-      // Create a safe filename with the file extension from the original name
+      // Create a very safe filename by completely removing problematic characters
+      // and using just the file extension from the original name
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || 
         (file.type === 'application/pdf' ? 'pdf' : 'pptx');
       
       // Generate storage path with sanitized filename
       const filePath = `${fileUuid}.${fileExtension}`;
-      
-      // First, check if the user can access the storage
-      try {
-        // Try to list files to verify storage access
-        const { error: storageCheckError } = await supabase
-          .storage
-          .from('pitch-decks')
-          .list();
-          
-        if (storageCheckError) {
-          // If we can't list files, the bucket might not exist
-          // Instead of creating it from the client side, we'll let the edge function handle it
-          console.log('Could not access the pitch-decks bucket. The edge function will handle bucket creation if needed.');
-        }
-      } catch (accessError) {
-        console.log('Storage access check failed:', accessError);
-        // Continue with upload - the edge function will handle bucket creation
-      }
       
       // Upload file to storage
       const { data: storageData, error: storageError } = await supabase
@@ -143,25 +106,13 @@ export function UploadPitchDeck() {
         .from('pitch-decks')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: true // Changed from false to true to handle case where file might exist
+          upsert: false
         });
 
-      stopProgressSimulation();
-      
       if (storageError) {
         console.error('Storage error:', storageError);
-        setUploadProgress(0);
-        
-        if (storageError.message.includes('storage/bucket-not-found')) {
-          throw new Error("Storage bucket not found. Please contact support.");
-        } else if (storageError.message.includes('row-level security policy')) {
-          throw new Error("You don't have permission to upload files. Please check your login status.");
-        } else {
-          throw new Error(storageError.message || "Failed to upload file");
-        }
+        throw new Error(storageError.message);
       }
-
-      setUploadProgress(100);
 
       // Create file record in the database
       const { data: fileData, error: fileError } = await supabase
@@ -177,7 +128,7 @@ export function UploadPitchDeck() {
         .single();
 
       if (fileError) {
-        throw new Error(fileError.message || "Failed to create file record");
+        throw new Error(fileError.message);
       }
 
       toast({
@@ -216,7 +167,6 @@ export function UploadPitchDeck() {
         navigate(`/pitch-deck-analysis/${analysisData.analysis.id}`);
       } catch (analysisError) {
         console.error('Analysis error:', analysisError);
-        setError(analysisError instanceof Error ? analysisError.message : "Failed to analyze the pitch deck");
         toast({
           title: "Analysis failed",
           description: analysisError instanceof Error ? analysisError.message : "Failed to analyze the pitch deck",
@@ -228,7 +178,6 @@ export function UploadPitchDeck() {
       
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error instanceof Error ? error.message : "An unknown error occurred");
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -243,16 +192,6 @@ export function UploadPitchDeck() {
   return (
     <Card className="w-full">
       <CardContent className="pt-6">
-        {error && (
-          <div className="mb-6 p-4 border border-red-300 bg-red-50 text-red-800 rounded-md">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 mr-2" />
-              <h4 className="font-medium">Error</h4>
-            </div>
-            <p className="mt-1 text-sm">{error}</p>
-          </div>
-        )}
-        
         <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-lg">
           {file ? (
             <div className="flex flex-col items-center space-y-4 w-full">
@@ -263,35 +202,22 @@ export function UploadPitchDeck() {
                   {(file.size / 1024 / 1024).toFixed(2)}MB
                 </p>
               </div>
-              
-              {uploading && (
-                <div className="w-full space-y-2">
-                  <Progress value={uploadProgress} className="w-full" />
-                  <p className="text-center text-sm text-muted-foreground">
-                    Uploading: {uploadProgress}%
-                  </p>
-                </div>
-              )}
-              
               <div className="flex space-x-3 mt-4">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setFile(null);
-                    setError(null);
-                  }}
+                  onClick={() => setFile(null)}
                   disabled={uploading || analyzing}
                 >
                   Change File
                 </Button>
                 <Button
                   onClick={handleUpload}
-                  disabled={uploading || analyzing || !isAuthenticated}
+                  disabled={uploading || analyzing}
                 >
                   {uploading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Uploading
+                      Uploading {uploadProgress}%
                     </>
                   ) : analyzing ? (
                     <>
