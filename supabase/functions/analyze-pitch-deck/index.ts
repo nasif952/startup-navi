@@ -20,6 +20,7 @@ serve(async (req) => {
     try {
       body = await req.json();
     } catch (e) {
+      console.error("Error parsing request body:", e);
       return new Response(
         JSON.stringify({ error: "Invalid request body" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -29,6 +30,7 @@ serve(async (req) => {
     const { fileId, fileType } = body;
     
     if (!fileId) {
+      console.error("Missing fileId parameter");
       return new Response(
         JSON.stringify({ error: "File ID is required" }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -36,9 +38,20 @@ serve(async (req) => {
     }
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase environment variables");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    console.log("Supabase client initialized");
+    console.log("Processing file ID:", fileId);
 
     // Fetch file information
     const { data: fileData, error: fileError } = await supabase
@@ -48,24 +61,73 @@ serve(async (req) => {
       .single();
 
     if (fileError || !fileData) {
+      console.error("File fetch error:", fileError);
       return new Response(
         JSON.stringify({ error: "File not found", details: fileError?.message }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log("File data retrieved:", fileData.name, "Path:", fileData.storage_path);
+
+    // Verify the storage bucket exists
+    try {
+      const { data: bucketData, error: bucketError } = await supabase
+        .storage
+        .getBucket('pitch-decks');
+        
+      if (bucketError) {
+        console.error("Storage bucket error:", bucketError);
+        
+        // Try creating the bucket if it doesn't exist
+        if (bucketError.message?.includes('does not exist')) {
+          const { data: newBucket, error: createError } = await supabase
+            .storage
+            .createBucket('pitch-decks', { public: false });
+            
+          if (createError) {
+            console.error("Error creating bucket:", createError);
+            throw new Error(`Storage bucket 'pitch-decks' does not exist and could not be created`);
+          }
+          console.log("Created storage bucket 'pitch-decks'");
+        } else {
+          throw new Error(bucketError.message);
+        }
+      }
+      
+      console.log("Storage bucket verified");
+    } catch (bucketError) {
+      console.error("Bucket verification error:", bucketError);
+      return new Response(
+        JSON.stringify({ error: "Storage configuration error", details: bucketError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Download file from storage
+    console.log("Attempting to download file from path:", fileData.storage_path);
     const { data: fileContent, error: downloadError } = await supabase
       .storage
       .from('pitch-decks')
       .download(fileData.storage_path);
 
-    if (downloadError || !fileContent) {
+    if (downloadError) {
+      console.error("File download error:", downloadError);
       return new Response(
-        JSON.stringify({ error: "Failed to download file", details: downloadError?.message }),
+        JSON.stringify({ error: "Failed to download file", details: downloadError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    if (!fileContent) {
+      console.error("File content is empty");
+      return new Response(
+        JSON.stringify({ error: "Empty file content" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log("File downloaded successfully");
 
     // Extract text from file (simplified - in a real implementation you'd use a proper parsing library)
     // For this example, we'll simulate extracted content based on file type
@@ -82,26 +144,54 @@ serve(async (req) => {
     - Funding Request`;
 
     // Create a new analysis record
+    console.log("Creating analysis record");
     const { data: analysis, error: analysisError } = await supabase
       .from('pitch_deck_analyses')
       .insert({
         file_id: fileId,
         title: fileData.name,
         status: 'processing',
-        file_type: fileData.file_type
+        file_type: fileData.file_type,
+        upload_date: new Date().toISOString()
       })
       .select()
       .single();
 
-    if (analysisError || !analysis) {
+    if (analysisError) {
+      console.error("Analysis record creation error:", analysisError);
       return new Response(
-        JSON.stringify({ error: "Failed to create analysis record", details: analysisError?.message }),
+        JSON.stringify({ error: "Failed to create analysis record", details: analysisError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    if (!analysis) {
+      console.error("Analysis record is null after creation");
+      return new Response(
+        JSON.stringify({ error: "Failed to create analysis record - null result" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log("Analysis record created with ID:", analysis.id);
+
     // Use OpenAI to analyze the pitch deck
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openaiApiKey) {
+      console.error("Missing OpenAI API key");
+      
+      // Update the analysis status to failed
+      await supabase
+        .from('pitch_deck_analyses')
+        .update({ status: 'failed' })
+        .eq('id', analysis.id);
+      
+      return new Response(
+        JSON.stringify({ error: "OpenAI API key not configured" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     const prompt = `
     You are a venture capital expert analyzing a startup pitch deck. 
@@ -142,6 +232,7 @@ serve(async (req) => {
     `;
 
     try {
+      console.log("Calling OpenAI API");
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -159,8 +250,9 @@ serve(async (req) => {
       });
 
       if (!openAIResponse.ok) {
-        const errorData = await openAIResponse.text();
-        console.error("OpenAI API error:", errorData);
+        const errorText = await openAIResponse.text();
+        console.error("OpenAI API error status:", openAIResponse.status);
+        console.error("OpenAI API error response:", errorText);
         
         // Update analysis status to failed
         await supabase
@@ -169,16 +261,17 @@ serve(async (req) => {
           .eq('id', analysis.id);
           
         return new Response(
-          JSON.stringify({ error: "AI analysis failed", details: errorData }),
+          JSON.stringify({ error: "AI analysis failed", details: `API Error: ${openAIResponse.status} - ${errorText}` }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       const openAIData = await openAIResponse.json();
-      console.log("OpenAI response received:", openAIData);
+      console.log("OpenAI response received");
       
-      if (openAIData.error) {
-        console.error("OpenAI API error:", openAIData.error);
+      if (!openAIData || !openAIData.choices || openAIData.choices.length === 0 || !openAIData.choices[0].message) {
+        console.error("Invalid OpenAI response structure:", openAIData);
+        
         // Update analysis status to failed
         await supabase
           .from('pitch_deck_analyses')
@@ -186,13 +279,14 @@ serve(async (req) => {
           .eq('id', analysis.id);
           
         return new Response(
-          JSON.stringify({ error: "AI analysis failed", details: openAIData.error }),
+          JSON.stringify({ error: "Invalid AI response format", details: "The AI response didn't match the expected structure" }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       // Get the raw content from OpenAI response
       let responseContent = openAIData.choices[0].message.content;
+      console.log("Raw response content:", responseContent);
       
       // Extract JSON from the content if wrapped in markdown code blocks
       if (responseContent.includes('```json')) {
@@ -205,9 +299,10 @@ serve(async (req) => {
       let analysisResult;
       try {
         analysisResult = JSON.parse(responseContent);
+        console.log("Successfully parsed analysis result");
       } catch (jsonError) {
         console.error("Error parsing JSON from OpenAI response:", jsonError);
-        console.log("Raw response content:", responseContent);
+        console.log("Raw response content that couldn't be parsed:", responseContent);
         
         // Update analysis status to failed
         await supabase
@@ -216,35 +311,85 @@ serve(async (req) => {
           .eq('id', analysis.id);
           
         return new Response(
-          JSON.stringify({ error: "Failed to parse AI analysis result", details: jsonError.message, rawResponse: responseContent }),
+          JSON.stringify({ 
+            error: "Failed to parse AI analysis result", 
+            details: jsonError.message, 
+            rawResponse: responseContent.substring(0, 500) // First 500 characters for debugging
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate the analysis result structure
+      if (!analysisResult || typeof analysisResult.overallScore !== 'number' || !analysisResult.metrics) {
+        console.error("Invalid analysis result structure:", analysisResult);
+        
+        // Update analysis status to failed
+        await supabase
+          .from('pitch_deck_analyses')
+          .update({ status: 'failed' })
+          .eq('id', analysis.id);
+          
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid analysis structure", 
+            details: "The AI response didn't include the required fields",
+            structure: Object.keys(analysisResult || {}).join(', ')
+          }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       // Update the analysis record with the results
-      await supabase
+      console.log("Updating analysis record with results");
+      const { error: updateError } = await supabase
         .from('pitch_deck_analyses')
         .update({ 
           analysis: analysisResult,
           status: 'completed'
         })
         .eq('id', analysis.id);
+        
+      if (updateError) {
+        console.error("Error updating analysis record:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to save analysis results", details: updateError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       // Add metrics to the pitch_deck_metrics table
-      const metricsToInsert = Object.entries(analysisResult.metrics).map(([key, value]) => ({
-        analysis_id: analysis.id,
-        metric_name: key,
-        score: value.score,
-        feedback: value.feedback
-      }));
+      try {
+        const metricsToInsert = Object.entries(analysisResult.metrics).map(([key, value]) => ({
+          analysis_id: analysis.id,
+          metric_name: key,
+          score: value.score,
+          feedback: value.feedback
+        }));
 
-      await supabase.from('pitch_deck_metrics').insert(metricsToInsert);
+        console.log("Inserting metrics into pitch_deck_metrics table");
+        const { error: metricsError } = await supabase
+          .from('pitch_deck_metrics')
+          .insert(metricsToInsert);
+          
+        if (metricsError) {
+          console.error("Error inserting metrics:", metricsError);
+          // Non-critical error, continue with the response
+        }
+      } catch (metricsError) {
+        console.error("Error processing metrics:", metricsError);
+        // Non-critical error, continue with the response
+      }
 
+      // Return success response
+      console.log("Successfully completed analysis");
       return new Response(
         JSON.stringify({ 
           success: true,
           analysis: {
             id: analysis.id,
+            title: analysis.title,
+            status: 'completed',
             result: analysisResult
           }
         }),
