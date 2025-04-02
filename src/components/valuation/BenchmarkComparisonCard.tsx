@@ -2,8 +2,9 @@
 import { Card } from '@/components/Card';
 import { useStartupScore } from '@/hooks/useStartupScore';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/client-extension';
 import { formatCurrency, formatPercentage } from '@/lib/formatters';
+import { IndustryBenchmark } from '@/integrations/supabase/client-extension';
 
 export function BenchmarkComparisonCard() {
   const { companyData } = useStartupScore();
@@ -14,13 +15,13 @@ export function BenchmarkComparisonCard() {
     queryFn: async () => {
       if (!companyData?.industry) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await extendedSupabase
         .from('industry_benchmarks')
         .select('*')
         .eq('industry', companyData.industry);
         
       if (error) throw error;
-      return data || [];
+      return data as IndustryBenchmark[] || [];
     },
     enabled: !!companyData?.industry,
   });
@@ -100,7 +101,7 @@ export function BenchmarkComparisonCard() {
 
 interface BenchmarkItemProps {
   label: string;
-  benchmark: any;
+  benchmark: IndustryBenchmark | null | undefined;
 }
 
 function BenchmarkItem({ label, benchmark }: BenchmarkItemProps) {

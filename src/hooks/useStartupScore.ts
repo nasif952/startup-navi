@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { extendedSupabase } from '@/integrations/supabase/client-extension';
 import { calculateStartupScore, ScoreData, saveStartupScore } from '@/lib/calculateScore';
+import { StartupScore } from '@/integrations/supabase/client-extension';
 
 export function useStartupScore() {
   const [loading, setLoading] = useState(false);
@@ -84,7 +86,7 @@ export function useStartupScore() {
     queryFn: async () => {
       if (!companyData) return null;
       
-      const { data, error } = await supabase
+      const { data, error } = await extendedSupabase
         .from('startup_scores')
         .select('*')
         .eq('company_id', companyData.id)
@@ -93,7 +95,7 @@ export function useStartupScore() {
         .maybeSingle();
         
       if (error) throw error;
-      return data;
+      return data as StartupScore | null;
     },
     enabled: !!companyData,
   });

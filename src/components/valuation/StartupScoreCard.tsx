@@ -1,116 +1,131 @@
 
 import { Card } from '@/components/Card';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/Button';
-import { RefreshCw, ChevronRight } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { useStartupScore } from '@/hooks/useStartupScore';
+import { Button } from '@/components/Button';
+import { Progress } from '@/components/ui/progress';
+import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { StartupScore } from '@/integrations/supabase/client-extension';
 
 export function StartupScoreCard() {
-  const { toast } = useToast();
   const { latestScore, calculateScore, loading } = useStartupScore();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const { toast } = useToast();
   
-  const handleRefreshScore = async () => {
-    setIsRefreshing(true);
+  const handleCalculateScore = async () => {
+    setCalculating(true);
     try {
-      await calculateScore();
-      toast({
-        title: "Score updated",
-        description: "The startup score has been recalculated."
-      });
+      const score = await calculateScore();
+      if (score) {
+        toast({
+          title: "Score updated",
+          description: `Your startup score is now ${score.totalScore}`,
+        });
+      }
     } catch (error) {
       toast({
-        title: "Error updating score",
-        description: "There was a problem updating the startup score.",
+        title: "Error calculating score",
+        description: "There was a problem calculating your startup score",
         variant: "destructive"
       });
     } finally {
-      setIsRefreshing(false);
+      setCalculating(false);
     }
   };
   
-  // Function to determine score color
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-500";
-    if (score >= 60) return "text-yellow-500";
-    return "text-red-500";
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch (e) {
+      return "Invalid date";
+    }
   };
   
   return (
-    <Card className="p-0">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h3 className="font-semibold text-lg">Startup Score</h3>
-        <Button 
-          variant="ghost" 
-          onClick={handleRefreshScore} 
-          isLoading={isRefreshing || loading}
-          iconLeft={<RefreshCw size={16} />} 
-          size="sm"
-        >
-          Refresh
-        </Button>
-      </div>
-      
+    <Card className="mb-6">
       <div className="p-4">
-        <div className="flex items-end justify-between mb-4">
+        <div className="flex flex-row items-start justify-between mb-4">
           <div>
-            <p className="text-sm text-muted-foreground">Your Startup Score</p>
-            <p className={`text-4xl font-bold ${getScoreColor(latestScore?.total_score || 0)}`}>
-              {latestScore?.total_score || 0}
+            <h2 className="text-xl font-bold mb-1">Startup Score</h2>
+            <p className="text-muted-foreground text-sm">
+              {latestScore ? `Last calculated: ${formatDate(latestScore.calculation_date)}` : 'Not calculated yet'}
             </p>
-            <p className="text-xs text-muted-foreground">out of 100</p>
           </div>
+          
           <Button 
-            variant="link" 
-            className="text-primary pb-1" 
-            iconRight={<ChevronRight size={16} />}
-            onClick={() => window.location.href = "/valuation?tab=benchmarks"}
+            onClick={handleCalculateScore}
+            disabled={loading || calculating}
+            className="flex items-center gap-2"
           >
-            View Details
+            {(loading || calculating) ? 'Calculating...' : 'Recalculate Score'}
+            <RefreshCw className={`h-4 w-4 ${calculating ? 'animate-spin' : ''}`} />
           </Button>
         </div>
         
-        <div className="space-y-3">
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-lg font-medium">Total Score</span>
+            <span className="text-2xl font-bold">{latestScore ? latestScore.total_score : 0}</span>
+          </div>
+          <Progress value={latestScore ? latestScore.total_score : 0} max={100} className="h-2" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm">Finance</span>
-              <span className="text-sm font-medium">{latestScore?.finance_score || 0}/100</span>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-muted-foreground">Financial Health</span>
+              <span className="font-medium">{latestScore ? latestScore.finance_score : 0}/100</span>
             </div>
-            <Progress value={latestScore?.finance_score || 0} className="h-2" />
+            <Progress 
+              value={latestScore ? latestScore.finance_score : 0} 
+              max={100} 
+              className="h-1.5 mb-4" 
+            />
+            
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-muted-foreground">Team & Organization</span>
+              <span className="font-medium">{latestScore ? latestScore.team_score : 0}/100</span>
+            </div>
+            <Progress 
+              value={latestScore ? latestScore.team_score : 0} 
+              max={100} 
+              className="h-1.5 mb-4" 
+            />
+            
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-muted-foreground">Growth Potential</span>
+              <span className="font-medium">{latestScore ? latestScore.growth_score : 0}/100</span>
+            </div>
+            <Progress 
+              value={latestScore ? latestScore.growth_score : 0} 
+              max={100} 
+              className="h-1.5" 
+            />
           </div>
           
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm">Team</span>
-              <span className="text-sm font-medium">{latestScore?.team_score || 0}/100</span>
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-muted-foreground">Market Position</span>
+              <span className="font-medium">{latestScore ? latestScore.market_score : 0}/100</span>
             </div>
-            <Progress value={latestScore?.team_score || 0} className="h-2" />
-          </div>
-          
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm">Growth</span>
-              <span className="text-sm font-medium">{latestScore?.growth_score || 0}/100</span>
+            <Progress 
+              value={latestScore ? latestScore.market_score : 0} 
+              max={100} 
+              className="h-1.5 mb-4" 
+            />
+            
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-muted-foreground">Product Maturity</span>
+              <span className="font-medium">{latestScore ? latestScore.product_score : 0}/100</span>
             </div>
-            <Progress value={latestScore?.growth_score || 0} className="h-2" />
-          </div>
-          
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm">Market</span>
-              <span className="text-sm font-medium">{latestScore?.market_score || 0}/100</span>
-            </div>
-            <Progress value={latestScore?.market_score || 0} className="h-2" />
-          </div>
-          
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm">Product</span>
-              <span className="text-sm font-medium">{latestScore?.product_score || 0}/100</span>
-            </div>
-            <Progress value={latestScore?.product_score || 0} className="h-2" />
+            <Progress 
+              value={latestScore ? latestScore.product_score : 0} 
+              max={100} 
+              className="h-1.5 mb-4" 
+            />
           </div>
         </div>
       </div>

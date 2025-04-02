@@ -1,4 +1,5 @@
 
+import { extendedSupabase } from "@/integrations/supabase/client-extension";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CompanyData {
@@ -48,7 +49,7 @@ export async function calculateStartupScore(
   // Fetch relevant benchmarks for the company's industry
   const industry = companyData.industry || 'Business Support Services';
   
-  const { data: benchmarks } = await supabase
+  const { data: benchmarks } = await extendedSupabase
     .from('industry_benchmarks')
     .select('*')
     .eq('industry', industry);
@@ -143,16 +144,16 @@ export async function calculateStartupScore(
   };
   
   // Growth rate score
-  const growthValue = valuationData.annual_roi || 0;
-  const growthBenchmark = benchmarkMap['avg_growth_rate'] || 25;
-  const growthPercentage = (growthValue / growthBenchmark) * 100;
-  const growthScore = Math.min(100, growthPercentage);
+  const growthRateValue = valuationData.annual_roi || 0;
+  const growthRateBenchmark = benchmarkMap['avg_growth_rate'] || 25;
+  const growthRatePercentage = (growthRateValue / growthRateBenchmark) * 100;
+  const growthRateScore = Math.min(100, growthRatePercentage);
   
   details['growth_rate'] = {
-    score: growthScore,
-    benchmark: growthBenchmark,
-    value: growthValue,
-    percentage: growthPercentage,
+    score: growthRateScore,
+    benchmark: growthRateBenchmark,
+    value: growthRateValue,
+    percentage: growthRatePercentage,
     weight: weights.growth_rate,
   };
   
@@ -199,7 +200,7 @@ export async function calculateStartupScore(
   
   const teamScore = details['team_size'].score;
   
-  const growthScore = (
+  const growthCategoryScore = (
     details['growth_rate'].score * (weights.growth_rate / 0.25) +
     details['annual_roi'].score * (weights.annual_roi / 0.25)
   );
@@ -223,7 +224,7 @@ export async function calculateStartupScore(
   
   return {
     totalScore: Math.round(totalScore),
-    growthScore: Math.round(growthScore),
+    growthScore: Math.round(growthCategoryScore),
     teamScore: Math.round(teamScore),
     financeScore: Math.round(financeScore),
     marketScore: Math.round(marketScore),
@@ -238,7 +239,7 @@ export async function saveStartupScore(
   scoreData: ScoreData
 ): Promise<void> {
   try {
-    await supabase
+    await extendedSupabase
       .from('startup_scores')
       .upsert({
         company_id: companyId,
