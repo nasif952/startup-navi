@@ -141,7 +141,7 @@ export function useSettingsData() {
         return [];
       }
       
-      // Map the data to the format expected by the UsersSection component
+      // Fix: properly map the data from profiles nested object
       return data.map(user => ({
         id: user.id,
         user: user.profiles?.full_name || 'Unknown',
