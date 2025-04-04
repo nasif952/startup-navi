@@ -11,10 +11,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Mail, Edit, Trash } from "lucide-react";
 import { User } from "lucide-react";
-import { AppUser } from "@/integrations/supabase/client-extension";
+
+interface AppUser {
+  id: string;
+  user: string;
+  email: string;
+  role: string;
+  status: string;
+  user_type: string;
+}
 
 interface UsersSectionProps {
-  appUsersData: any[] | null;
+  appUsersData: AppUser[] | null;
 }
 
 export function UsersSection({ appUsersData }: UsersSectionProps) {
