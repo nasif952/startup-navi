@@ -60,7 +60,7 @@ export function TopBar() {
   return (
     <div className="h-16 bg-white border-b border-border flex items-center justify-between px-4 shadow-sm">
       <div className="flex items-center">
-        <h2 className="text-lg font-bold text-primary">Diamond AI</h2>
+        <h2 className="text-lg font-bold text-primary">DiamondSolution</h2>
       </div>
       
       <div className="flex items-center space-x-4">

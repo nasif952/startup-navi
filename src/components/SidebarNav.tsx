@@ -80,9 +80,9 @@ export function SidebarNav() {
         <div className="p-5">
           <div className="flex items-center space-x-2 mb-8">
             <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-              <span className="text-white font-bold">S</span>
+              <span className="text-white font-bold">D</span>
             </div>
-            <h1 className="text-xl font-bold">StartupHub</h1>
+            <h1 className="text-xl font-bold">DiamondSolution</h1>
           </div>
 
           <nav className="space-y-1">
