@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { extendedSupabase } from "@/integrations/supabase/client-extension";
 import { useToast } from "@/hooks/use-toast";
@@ -115,7 +116,7 @@ export function useSettingsData() {
     queryFn: async () => {
       if (!companyData?.id) return [];
 
-      // Define a type for the data returned by the query
+      // Define the correct type for the response from Supabase
       interface AppUserWithProfiles {
         id: string;
         user_id: string;
@@ -154,8 +155,11 @@ export function useSettingsData() {
         return [];
       }
       
-      // Properly map the data from the profiles nested object
-      return (data as AppUserWithProfiles[]).map(user => ({
+      // Use a type assertion with 'as unknown' first to avoid the type error
+      const typedData = data as unknown as AppUserWithProfiles[];
+      
+      // Map the data to the format we need
+      return typedData.map(user => ({
         id: user.id,
         user: user.profiles ? user.profiles.full_name || 'Unknown' : 'Unknown',
         user_type: user.user_type,
