@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { extendedSupabase } from "@/integrations/supabase/client-extension";
 import { useToast } from "@/hooks/use-toast";
@@ -116,6 +115,20 @@ export function useSettingsData() {
     queryFn: async () => {
       if (!companyData?.id) return [];
 
+      // Define a type for the data returned by the query
+      interface AppUserWithProfiles {
+        id: string;
+        user_id: string;
+        user_type: string;
+        status: string;
+        role: string;
+        profiles: {
+          full_name: string | null;
+          last_name: string | null;
+          email: string | null;
+        } | null;
+      }
+
       const { data, error } = await extendedSupabase
         .from('app_users')
         .select(`
@@ -141,8 +154,8 @@ export function useSettingsData() {
         return [];
       }
       
-      // Fix: properly map the data from the profiles nested object
-      return data.map(user => ({
+      // Properly map the data from the profiles nested object
+      return (data as AppUserWithProfiles[]).map(user => ({
         id: user.id,
         user: user.profiles ? user.profiles.full_name || 'Unknown' : 'Unknown',
         user_type: user.user_type,
