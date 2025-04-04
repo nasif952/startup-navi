@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Image, Upload } from 'lucide-react';
+import { Image, Upload, User } from 'lucide-react';
 
 const companySchema = z.object({
   name: z.string().min(1, "Company name is required"),
@@ -89,23 +89,23 @@ export default function Settings() {
       }
       
       return data;
-    },
-    onSuccess: (data) => {
-      if (data) {
-        companyForm.reset({
-          name: data.name || "",
-          industry: data.industry || "",
-          business_activity: data.business_activity || "",
-          stage: data.stage || "",
-          founded_year: data.founded_year || 2025,
-          website_url: data.website_url || "",
-          country: data.country || "",
-          currency: data.currency || "",
-          sector: data.sector || "",
-        });
-      }
     }
   });
+
+  // Update company form when data is loaded
+  if (companyData && !isCompanyLoading) {
+    companyForm.reset({
+      name: companyData.name || "",
+      industry: companyData.industry || "",
+      business_activity: companyData.business_activity || "",
+      stage: companyData.stage || "",
+      founded_year: companyData.founded_year || 2025,
+      website_url: companyData.website_url || "",
+      country: companyData.country || "",
+      currency: companyData.currency || "",
+      sector: companyData.sector || "",
+    });
+  }
 
   // Update company mutation
   const updateCompany = useMutation({
