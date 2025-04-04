@@ -3,7 +3,7 @@ export const teamQuestions = [
   {
     question: "How much did the founders invest in the company in terms of capital collectively so far?",
     question_number: "1.1",
-    response_type: "text"
+    response_type: "text",
   },
   {
     question: "Is the majority of the founders involved in other companies or occupations?",
@@ -45,7 +45,7 @@ export const teamQuestions = [
   {
     question: "How many employees work for the company? (excluding founders, interns and freelancers)",
     question_number: "1.5",
-    response_type: "text"
+    response_type: "text",
   },
   {
     question: "How long have the members of the core team worked (or studied) together?",
@@ -61,7 +61,7 @@ export const teamQuestions = [
   {
     question: "How many years of relevant industry experience does the core team have collectively?",
     question_number: "1.7",
-    response_type: "text"
+    response_type: "text",
   },
   {
     question: "Does any member of the core team have business and managerial background?",
@@ -80,11 +80,10 @@ export const teamQuestions = [
     question_number: "1.9",
     response_type: "dropdown",
     options: [
-      "No",
       "No, But We Outsource All Of Them",
       "We Have Some Of The Technical Capabilities And Outsource The Rest",
       "We Have The Majority Of The Technical Capabilities And Outsource The Rest",
-      "Yes"
+      "Yes, We Have All The Required Technical Capabilities In-House"
     ]
   }
 ];
