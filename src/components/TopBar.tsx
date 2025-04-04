@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Bell, LogOut, User } from 'lucide-react';
+import { Bell, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -40,6 +40,10 @@ export function TopBar() {
 
   const handleLogin = () => {
     navigate('/auth');
+  };
+
+  const handleNavigateToSettings = () => {
+    navigate('/settings');
   };
 
   // Get user initials or default to "N"
@@ -99,6 +103,10 @@ export function TopBar() {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleNavigateToSettings}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <User className="mr-2 h-4 w-4" />
                 Profile

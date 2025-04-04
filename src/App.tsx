@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import PitchDeckAnalysis from "./pages/PitchDeckAnalysis";
 import DueDiligence from "./pages/DueDiligence";
 import InvestorDashboard from "./pages/InvestorDashboard";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,16 @@ const App = () => (
                 <AuthGuard>
                   <Layout>
                     <InvestorDashboard />
+                  </Layout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <AuthGuard>
+                  <Layout>
+                    <Settings />
                   </Layout>
                 </AuthGuard>
               }
