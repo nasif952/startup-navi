@@ -1,281 +1,371 @@
-# StartupNavi - Project Documentation
+# StartupNavi - Comprehensive Project Documentation
 
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Technical Stack](#technical-stack)
-3. [Core Features](#core-features)
-4. [Database Structure](#database-structure)
-5. [Components](#components)
-6. [Integration Points](#integration-points)
-7. [State Management](#state-management)
-8. [Security Features](#security-features)
-9. [Development Guidelines](#development-guidelines)
+3. [Project Structure](#project-structure)
+4. [Core Features & Implementation](#core-features--implementation)
+5. [Database Architecture](#database-architecture)
+6. [State Management](#state-management)
+7. [Components Architecture](#components-architecture)
+8. [Valuation System](#valuation-system)
+9. [Authentication](#authentication)
+10. [Integration Points](#integration-points)
+11. [Development Practices](#development-practices)
 
 ## Project Overview
-StartupNavi is a comprehensive startup management and analytics platform designed to help startups track metrics, manage valuations, and handle investor relations.
 
-### Project Goals
-- Provide startups with tools for financial management
-- Facilitate investor relations and due diligence
-- Streamline valuation and cap table management
-- Enable data-driven decision making
+StartupNavi is a comprehensive startup management platform that helps founders track metrics, manage valuations, and handle investor relations. The application uses a multi-faceted valuation methodology that combines five different approaches to provide a balanced startup valuation.
+
+### Business Logic
+
+The core business logic centers on:
+- Generating accurate startup valuations through multiple methodologies
+- Tracking financial metrics over time
+- Managing cap tables and investor relationships
+- Providing data-driven insights for decision-making
 
 ## Technical Stack
 
 ### Frontend
-- React 18.3.1
-- TypeScript
-- Vite 5.4.1
-- TailwindCSS 3.4.11
-- shadcn/ui components
+- **React 18.3.1**: Core UI library
+- **TypeScript**: For type safety across the codebase
+- **Vite 5.4.1**: Build tool and development server
+- **TailwindCSS 3.4.11**: Utility-first CSS framework for styling
+- **shadcn/ui**: Component library based on Radix UI primitives
+- **Lucide Icons**: SVG icon library
 
 ### State Management & Data Fetching
-- TanStack Query (React Query) 5.56.2
-- React Context API
-- Zod for schema validation
+- **TanStack Query 5.56.2**: For data fetching, caching, and state management
+- **React Context API**: For global state (auth, theme, etc.)
+- **Zod**: Schema validation library for form and data validation
+- **Custom hooks**: For encapsulating and reusing complex logic
 
 ### Backend & Database
-- Supabase
-- Real-time subscriptions
-- Authentication services
+- **Supabase**: Backend-as-a-Service platform providing:
+  - PostgreSQL database
+  - Authentication services
+  - Row-level security
+  - Real-time subscriptions
+  - Storage solutions
 
-### Key Dependencies
-```json
-{
-  "react": "^18.3.1",
-  "react-router-dom": "^6.26.2",
-  "@supabase/supabase-js": "^2.49.3",
-  "@tanstack/react-query": "^5.56.2",
-  "date-fns": "^3.6.0",
-  "zod": "^3.23.8"
-}
+## Project Structure
+
+```
+src/
+├── components/     # Reusable UI components
+│   ├── ui/         # Basic UI elements (buttons, cards, etc.)
+│   └── shared/     # Shared composite components
+├── contexts/       # React contexts for global state
+├── hooks/          # Custom hooks (incl. useValuation)
+├── lib/            # Utility functions & business logic
+│   └── valuationCalculator.ts # Core valuation algorithms
+├── pages/          # Route components organized by feature
+│   ├── auth/       # Authentication-related pages
+│   ├── dashboard/  # Dashboard views
+│   └── valuation/  # Valuation-specific pages
+│       └── ValuationContent.tsx # Main valuation UI
+├── integrations/   # External service integration code
+│   └── supabase.ts # Supabase client configuration
+├── schemas/        # Zod schemas for validation
+├── utils/          # Helper functions
+├── App.tsx         # Main application component
+└── main.tsx        # Application entry point
 ```
 
-## Core Features
+## Core Features & Implementation
 
-### Authentication System
-- Email/password authentication
-- Session management
-- Protected routes
-- User profiles
+### Valuation System
 
-### Dashboard Features
-1. Company Overview
-   - Basic company information
-   - Industry classification
-   - Stage tracking
-   - Profile completion
+The valuation system is the cornerstone of the application, implementing five different valuation methodologies:
 
-2. Financial Metrics
-   - Revenue tracking
-   - Gross margin analysis
-   - Cash flow monitoring
-   - Performance vs targets
+1. **Scorecard Method**: Compares the startup to similar funded companies
+2. **Checklist Method**: Evaluates the startup against a series of criteria
+3. **Venture Capital Method**: Calculates based on expected ROI and exit value
+4. **DCF with Long-Term Growth**: Discounted cash flow with terminal growth
+5. **DCF with Multiples**: Discounted cash flow with industry multiples
 
-3. Investment Management
-   - Total investment tracking
-   - Share price calculations
-   - Valuation history
-   - Cap table management
+#### Implementation Details
 
-### Module-specific Features
-1. Valuation Module
-   ```typescript
-   interface ValuationData {
-     selected_valuation: number;
-     valuation_date: Date;
-     methodology: string;
-     assumptions: string[];
-   }
-   ```
+- **Calculation Engine**: `src/lib/valuationCalculator.ts` contains all valuation algorithms
+- **Questionnaire System**: Gathers inputs for the valuation methods
+- **Weighting System**: Each method is weighted based on company stage
+- **Visual Representation**: Charts display the breakdown of values
 
-2. Financial Overview
-   ```typescript
-   interface FinancialMetrics {
-     revenue: number;
-     grossMargin: number;
-     cashOnHand: number;
-     burnRate: number;
-   }
-   ```
+#### Valuation Data Flow
+1. User completes questionnaire
+2. `useValuation` hook triggers calculation
+3. `valuationCalculator.ts` processes the data
+4. Results are stored in Supabase
+5. UI updates with visualization in `ValuationContent.tsx`
 
-3. Performance Tracking
-   ```typescript
-   interface PerformanceMetric {
-     name: string;
-     actual: number;
-     target: number;
-     unit: string;
-     month: number;
-     year: number;
-   }
-   ```
+### Financial Dashboard
 
-## Database Structure
+The financial dashboard tracks key metrics including:
+- Revenue
+- Burn rate
+- Cash runway
+- Key performance indicators
+- Growth metrics
+
+## Database Architecture
 
 ### Supabase Tables
 
-1. profiles
-   ```sql
-   CREATE TABLE profiles (
-     id UUID REFERENCES auth.users PRIMARY KEY,
-     full_name TEXT,
-     avatar_url TEXT,
-     updated_at TIMESTAMP WITH TIME ZONE
-   );
-   ```
+1. **profiles**
+   - Stores user profile information
+   - Linked to auth.users via RLS policies
 
-2. companies
-   ```sql
-   CREATE TABLE companies (
-     id UUID PRIMARY KEY,
-     name TEXT,
-     industry TEXT,
-     founded_year DATE,
-     stage TEXT,
-     business_activity TEXT
-   );
-   ```
+2. **companies**
+   - Central table for company information
+   - Fields: name, industry, founded_year, stage, etc.
+   - One-to-many relationship with other entities
 
-3. valuations
-   ```sql
-   CREATE TABLE valuations (
-     id UUID PRIMARY KEY,
-     company_id UUID REFERENCES companies(id),
-     selected_valuation DECIMAL,
-     valuation_date TIMESTAMP WITH TIME ZONE
-   );
-   ```
+3. **valuations**
+   - Stores valuation history and calculations
+   - Fields:
+     - selected_valuation: User-selected final valuation
+     - pre_money_valuation: Calculated pre-money value
+     - investment: Current round investment amount
+     - post_money_valuation: Value after investment
+     - valuation_min/max: Range boundaries
+     - valuation_methods: JSON field with method calculations
+   - Foreign key to companies table
 
-4. investments
-   ```sql
-   CREATE TABLE investments (
-     id UUID PRIMARY KEY,
-     company_id UUID REFERENCES companies(id),
-     capital_invested DECIMAL,
-     number_of_shares INTEGER,
-     investment_date TIMESTAMP WITH TIME ZONE
-   );
-   ```
+4. **questionnaires**
+   - Stores questionnaire responses for valuation
+   - Linked to valuations via valuation_id
+   - Questions organized by category
 
-5. performance_values
-   ```sql
-   CREATE TABLE performance_values (
-     id UUID PRIMARY KEY,
-     metric_id UUID REFERENCES performance_metrics(id),
-     actual DECIMAL,
-     target DECIMAL,
-     month INTEGER,
-     year INTEGER
-   );
-   ```
+5. **investments**
+   - Tracks investment rounds
+   - Fields: capital_invested, shares, investment_date
+   - Foreign key to companies table
 
-## Components
+6. **performance_metrics**
+   - Defines trackable metrics
+   - Fields: name, unit, description
 
-### Core Components
-1. Layout
-   ```typescript
-   interface LayoutProps {
-     children: React.ReactNode;
-   }
-   ```
+7. **performance_values**
+   - Stores actual metric values over time
+   - Fields: actual, target, month, year
+   - Foreign key to performance_metrics
 
-2. AuthGuard
-   ```typescript
-   interface AuthGuardProps {
-     children: React.ReactNode;
-   }
-   ```
+### Row-Level Security
 
-### UI Components
-1. Card
-2. Button
-3. ProgressBar
-4. DataTable
-5. Charts
-
-## Integration Points
-
-### Supabase Integration
-```typescript
-import { createClient } from '@supabase/supabase-js';
-
-export const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
-```
-
-### Authentication Flow
-```typescript
-const signIn = async (email: string, password: string) => {
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-  return { error };
-};
+```sql
+-- Example RLS policy for companies table
+CREATE POLICY "Users can only access their own companies" ON companies
+  FOR ALL USING (auth.uid() IN (
+    SELECT user_id FROM company_users WHERE company_id = id
+  ));
 ```
 
 ## State Management
 
-### Global State (AuthContext)
+### Authentication Context
+Located in `src/contexts/AuthContext.tsx`, manages:
+- User authentication state
+- Login/logout operations
+- Profile information
+- Session persistence
+
+### Valuation Hook
+The `useValuation` hook in `src/hooks/useValuation.ts` manages:
+- Fetching valuation data
+- Calculation status (idle, calculating, error)
+- Updating selected valuation
+- Triggering recalculation
+- Checking questionnaire completion status
+
 ```typescript
-interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  profile: any | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any | null }>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+// Key types in useValuation
+interface ValuationMethods {
+  scorecard: number;
+  checklist: number;
+  ventureCap: number;
+  dcfGrowth: number;
+  dcfMultiple: number;
+  weights: Record<string, { weight: number; enabled: boolean }>;
+}
+
+interface UseValuationReturn {
+  valuation: ValuationData | null;
+  isLoading: boolean;
+  error: Error | null;
+  calculationStatus: 'idle' | 'calculating' | 'error';
+  isQuestionnaireComplete: boolean;
+  hasFinancialsData: boolean;
+  updateSelectedValuation: (value: number) => void;
+  recalculateValuation: () => void;
 }
 ```
 
-### React Query Usage
+### Data Fetching Pattern
+Uses TanStack Query for data management:
 ```typescript
-const { data: company } = useQuery({
-  queryKey: ['company'],
+// Example query pattern
+const { data, isLoading, error } = useQuery({
+  queryKey: ['valuation', valuationId],
   queryFn: async () => {
     const { data, error } = await supabase
-      .from('companies')
-      .select('*')
-      .limit(1)
+      .from('valuations')
+      .select('*, companies(*)')
+      .eq('id', valuationId)
       .single();
+      
+    if (error) throw error;
     return data;
+  }
+});
+
+// Example mutation pattern
+const mutation = useMutation({
+  mutationFn: async (newValue: number) => {
+    const { error } = await supabase
+      .from('valuations')
+      .update({ selected_valuation: newValue })
+      .eq('id', valuationId);
+      
+    if (error) throw error;
   },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['valuation'] });
+    toast.success('Valuation updated successfully');
+  },
+  onError: (error) => {
+    toast.error(`Error updating valuation: ${error.message}`);
+  }
 });
 ```
 
-## Security Features
+## Components Architecture
 
-### Route Protection
+### UI Component Structure
+Components follow a clear hierarchy:
+- **Primitive Components**: Buttons, inputs, cards, etc.
+- **Composite Components**: Combinations of primitives for specific purposes
+- **Page Components**: Full page layouts combining multiple composites
+
+### ValuationContent Component
+
+The `ValuationContent` component in `src/pages/valuation/ValuationContent.tsx` implements:
+1. Valuation summary display
+2. Interactive slider for manual valuation adjustment
+3. Visualization of valuation methods
+4. Current funding round information
+5. Method weight visualization
+
+Key implementation features:
+- Uses fixed-height bars for visualization due to extreme value differences
+- Implements logarithmic normalization for better visual representation
+- Handles edge cases with mock data for improved UX
+
+### Charts and Visualizations
+
+The application uses custom chart components:
+- **ValuationBarChart**: Shows the value of each methodology
+- **MethodWeightGauge**: Displays the relative importance of each method
+
+### Component Event Flow
+
+For the valuation slider:
+1. User moves the slider
+2. `handleRangeChange` updates local state
+3. User clicks "Save Valuation"
+4. `saveSelectedValuation` calls the mutation function
+5. Database is updated with the new value
+6. UI refreshes to reflect changes
+
+## Valuation System
+
+### Calculation Algorithm
+
+The valuation calculation in `valuationCalculator.ts` follows these steps:
+1. Fetch questionnaire data
+2. Determine company stage and set appropriate weights
+3. Calculate each method individually:
+   - Scorecard: Compares to similar companies with adjustment factors
+   - Checklist: Evaluates against success criteria
+   - Venture Capital: Calculates based on terminal value and expected ROI
+   - DCF Growth: Discounted cash flow with growth rate
+   - DCF Multiple: Discounted cash flow with industry multiple
+4. Apply normalization to handle extreme value differences
+5. Calculate weighted average based on company stage
+6. Update database with results
+
+### Value Normalization
+
+Due to large differences between valuation methods (from $19 to $10M+), the system implements:
+- Logarithmic normalization for visualization
+- Median-based adjustments for calculation
+- Handling of zero or negative values
+- Data formatting for readable display
+
+## Authentication
+
+Authentication uses Supabase Auth with:
+- Email/password authentication
+- Session persistence
+- Protected routes via AuthGuard
+- User profile management
+
+## Integration Points
+
+### Supabase Integration
+
 ```typescript
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, loading } = useAuth();
-  
-  if (loading) return <LoadingSpinner />;
-  if (!session) return <Navigate to="/auth" />;
-  
-  return <>{children}</>;
-};
+// src/integrations/supabase.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
-### Data Access Patterns
-- Row Level Security (RLS) in Supabase
-- Authentication checks
-- Role-based access control
+Query patterns:
+- Select with joins: `supabase.from('table').select('*, relation(*)')`
+- Filtered queries: `.eq('field', value)`
+- Updates: `.update({ field: value })`
+- Inserts: `.insert([{ field: value }])`
 
-## Development Guidelines
+## Development Practices
 
-### Code Organization
-src/
-├── components/ # Reusable UI components
-├── contexts/ # React contexts
-├── hooks/ # Custom hooks
-├── lib/ # Utility functions
-├── pages/ # Route components
-└── integrations/ # External service integrations
+### Error Handling Pattern
+```typescript
+try {
+  // Operation that might fail
+} catch (error) {
+  if (error instanceof Error) {
+    toast.error(`Specific error: ${error.message}`);
+  } else {
+    toast.error('An unknown error occurred');
+  }
+}
+```
+
+### Form Validation with Zod
+```typescript
+const valuationSchema = z.object({
+  initial_estimate: z.number().min(1000, 'Minimum valuation is $1,000'),
+  industry_multiple: z.number().min(0.1).max(20),
+  annual_roi: z.number().min(10).max(100)
+});
+```
+
+### Component Props Pattern
+```typescript
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'destructive';
+  size?: 'sm' | 'md' | 'lg';
+  iconLeft?: React.ReactNode;
+  iconRight?: React.ReactNode;
+  isLoading?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+```
 
 

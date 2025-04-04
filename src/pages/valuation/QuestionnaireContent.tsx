@@ -1,13 +1,23 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/Button';
 import { StepProgress } from '@/components/StepProgress';
-import { Loader2, ChevronRight, PlusCircle } from 'lucide-react';
+import { Loader2, ChevronRight, PlusCircle, RefreshCw } from 'lucide-react';
 import { AddQuestionDialog } from '@/components/dialogs/AddQuestionDialog';
 import { createStepsArray, getStepTitle } from '@/utils/questionnaire-utils';
 import { useQuestionnaireData } from '@/hooks/useQuestionnaireData';
 import { QuestionsList } from '@/components/valuation/QuestionsList';
 import { useQueryClient } from '@tanstack/react-query';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface QuestionnaireContentProps {
   setActiveTab: (tab: string) => void;
@@ -23,7 +33,8 @@ export function QuestionnaireContent({ setActiveTab }: QuestionnaireContentProps
     isSaving,
     handleResponseChange,
     handleSaveAndNext,
-    getLastQuestionNumber
+    getLastQuestionNumber,
+    resetQuestionnaire
   } = useQuestionnaireData(currentStep);
   
   const steps = createStepsArray(7, currentStep);
@@ -54,19 +65,42 @@ export function QuestionnaireContent({ setActiveTab }: QuestionnaireContentProps
             Step {currentStep}: {getStepTitle(currentStep)}
           </h2>
           
-          {questionnaireData?.questionnaire && (
-            <AddQuestionDialog
-              trigger={
+          <div className="flex gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
                 <Button variant="outline" size="sm" className="flex items-center gap-2">
-                  <PlusCircle size={16} />
-                  <span>Add Question</span>
+                  <RefreshCw size={16} />
+                  <span>Reset Questions</span>
                 </Button>
-              }
-              questionnaireId={questionnaireData.questionnaire.id}
-              lastQuestionNumber={getLastQuestionNumber()}
-              onQuestionAdded={handleQuestionAdded}
-            />
-          )}
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset Questionnaire</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will reset all questions for this step to the default questions. Any responses will be lost. Are you sure you want to continue?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={resetQuestionnaire}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            {questionnaireData?.questionnaire && (
+              <AddQuestionDialog
+                trigger={
+                  <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <PlusCircle size={16} />
+                    <span>Add Question</span>
+                  </Button>
+                }
+                questionnaireId={questionnaireData.questionnaire.id}
+                lastQuestionNumber={getLastQuestionNumber()}
+                onQuestionAdded={handleQuestionAdded}
+              />
+            )}
+          </div>
         </div>
       </div>
       

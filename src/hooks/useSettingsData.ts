@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { extendedSupabase } from "@/integrations/supabase/client-extension";
 import { useToast } from "@/hooks/use-toast";
@@ -110,63 +109,64 @@ export function useSettingsData() {
     enabled: !!companyData?.id
   });
 
-  // Fetch app users data
+  // Fetch app users data - FIXED to not use the missing relationship
   const { data: appUsersData } = useQuery<any[]>({
     queryKey: ['app-users'],
     queryFn: async () => {
       if (!companyData?.id) return [];
 
-      // Define the correct type for the response from Supabase
-      interface AppUserWithProfiles {
-        id: string;
-        user_id: string;
-        user_type: string;
-        status: string;
-        role: string;
-        profiles: {
-          full_name: string | null;
-          last_name: string | null;
-          email: string | null;
-        } | null;
-      }
-
-      const { data, error } = await extendedSupabase
+      // First, get all app users for this company
+      const { data: appUsers, error: appUsersError } = await extendedSupabase
         .from('app_users')
-        .select(`
-          id,
-          user_id,
-          user_type,
-          status,
-          role,
-          profiles:user_id (
-            full_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('company_id', companyData.id);
         
-      if (error) {
+      if (appUsersError) {
         toast({
           title: "Error loading users data",
-          description: error.message,
+          description: appUsersError.message,
           variant: "destructive"
         });
         return [];
       }
+
+      // Get the profiles manually for each app user
+      const userIds = appUsers.map(user => user.user_id);
       
-      // Use a type assertion with 'as unknown' first to avoid the type error
-      const typedData = data as unknown as AppUserWithProfiles[];
+      const { data: profiles, error: profilesError } = await extendedSupabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+        
+      if (profilesError) {
+        toast({
+          title: "Error loading user profiles",
+          description: profilesError.message,
+          variant: "destructive"
+        });
+        // Return the app users without profiles rather than nothing
+        return appUsers.map(user => ({
+          id: user.id,
+          user: "Unknown",
+          user_type: user.user_type,
+          status: user.status,
+          role: user.role,
+          email: "N/A"
+        }));
+      }
       
-      // Map the data to the format we need
-      return typedData.map(user => ({
-        id: user.id,
-        user: user.profiles ? user.profiles.full_name || 'Unknown' : 'Unknown',
-        user_type: user.user_type,
-        status: user.status,
-        role: user.role,
-        email: user.profiles ? user.profiles.email || 'N/A' : 'N/A',
-      }));
+      // Map users with their profiles
+      return appUsers.map(user => {
+        const userProfile = profiles.find(profile => profile.id === user.user_id);
+        return {
+          id: user.id,
+          user: userProfile?.full_name || "Unknown",
+          user_type: user.user_type,
+          status: user.status,
+          role: user.role,
+          email: userProfile?.email || "N/A"
+        };
+      });
     },
     enabled: !!companyData?.id
   });
