@@ -70,12 +70,12 @@ export function QuestionItem({
             value={currentResponse || ''} 
             onValueChange={(value) => onResponseChange(questionId, value)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full text-left">
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white border border-gray-200 shadow-lg z-50 max-h-[300px] overflow-y-auto">
               {options?.map((option) => (
-                <SelectItem key={option} value={option}>
+                <SelectItem key={option} value={option} className="cursor-pointer hover:bg-gray-100">
                   {option}
                 </SelectItem>
               ))}
