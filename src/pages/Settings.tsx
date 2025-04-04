@@ -7,7 +7,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { ProfileSection } from "@/components/settings/ProfileSection";
-import { Company, BusinessQuestion, SocialMedia, AppUser, Profile } from "@/integrations/supabase/client-extension";
+import { CompanyInfoSection } from "@/components/settings/CompanyInfoSection";
+import { AdditionalQuestionsSection } from "@/components/settings/AdditionalQuestionsSection";
+import { SocialMediaSection } from "@/components/settings/SocialMediaSection";
+import { UsersSection } from "@/components/settings/UsersSection";
+import { Company, BusinessQuestion, SocialMedia, Profile } from "@/integrations/supabase/client-extension";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -16,7 +20,7 @@ export default function Settings() {
   const [activeSettingsTab, setActiveSettingsTab] = useState("profile-details");
 
   // Fetch company data
-  const { data: companyData, isLoading: isCompanyLoading } = useQuery({
+  const { data: companyData, isLoading: isCompanyLoading } = useQuery<Company | null>({
     queryKey: ['company-settings'],
     queryFn: async () => {
       const { data, error } = await extendedSupabase
@@ -181,27 +185,19 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="company-info">
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">Company settings content will be here.</p>
-          </div>
+          <CompanyInfoSection companyData={companyData} />
         </TabsContent>
 
         <TabsContent value="additional-questions">
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">Additional questions content will be here.</p>
-          </div>
+          <AdditionalQuestionsSection questionsData={questionsData} companyData={companyData} />
         </TabsContent>
 
         <TabsContent value="social-media">
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">Social media settings content will be here.</p>
-          </div>
+          <SocialMediaSection socialMediaData={socialMediaData} companyData={companyData} />
         </TabsContent>
 
         <TabsContent value="users">
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">User management content will be here.</p>
-          </div>
+          <UsersSection appUsersData={appUsersData} />
         </TabsContent>
       </Tabs>
     </SettingsLayout>
