@@ -49,6 +49,7 @@ export function QuestionsList({
           number={question.question_number} 
           question={question.question}
           responseType={question.response_type}
+          options={question.options}
           currentResponse={question.response || ''}
           onResponseChange={onResponseChange}
         />

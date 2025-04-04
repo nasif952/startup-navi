@@ -1,5 +1,12 @@
 
 import { Input } from '@/components/ui/input';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 interface QuestionItemProps {
   questionId: string;
@@ -7,10 +14,20 @@ interface QuestionItemProps {
   question: string;
   responseType: string;
   currentResponse: string;
+  options?: string[];
   onResponseChange: (questionId: string, value: string | number | boolean) => void;
 }
 
-export function QuestionItem({ questionId, number, question, responseType, currentResponse, onResponseChange }: QuestionItemProps) {
+export function QuestionItem({ 
+  questionId, 
+  number, 
+  question, 
+  responseType, 
+  options,
+  currentResponse, 
+  onResponseChange 
+}: QuestionItemProps) {
+  
   const renderInput = () => {
     switch (responseType) {
       case 'number':
@@ -46,6 +63,24 @@ export function QuestionItem({ questionId, number, question, responseType, curre
               <span className="ml-2">No</span>
             </label>
           </div>
+        );
+      case 'dropdown':
+        return (
+          <Select 
+            value={currentResponse || ''} 
+            onValueChange={(value) => onResponseChange(questionId, value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select an option" />
+            </SelectTrigger>
+            <SelectContent>
+              {options?.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       default:
         return (
