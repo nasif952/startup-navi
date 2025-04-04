@@ -84,10 +84,6 @@ export function TopBar() {
           )}
         </div>
 
-        <Button className="bg-destructive text-destructive-foreground px-4 py-2 rounded-md hover:bg-destructive/90 transition-colors duration-200">
-          Upgrade Now
-        </Button>
-
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
