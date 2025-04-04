@@ -26,6 +26,47 @@ export interface StartupScore {
   updated_at: string;
 }
 
+export interface BusinessQuestion {
+  id: string;
+  company_id?: string | null;
+  problem_solving?: string | null;
+  solution?: string | null;
+  why_now?: string | null;
+  business_model?: string | null;
+  founding_team_gender?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface SocialMedia {
+  id: string;
+  company_id?: string | null;
+  linkedin?: string | null;
+  instagram?: string | null;
+  crunchbase?: string | null;
+  twitter?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface AppUser {
+  id: string;
+  user_id: string;
+  company_id?: string | null;
+  user_type?: string | null;
+  status?: string | null;
+  role?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  profiles?: {
+    full_name?: string | null;
+    last_name?: string | null;
+    email?: {
+      email?: string | null;
+    } | null;
+  } | null;
+}
+
 // Extend the Database interface to include our custom tables
 export interface Database extends SupabaseDatabase {
   public: {
@@ -35,6 +76,15 @@ export interface Database extends SupabaseDatabase {
       };
       startup_scores: {
         Row: StartupScore;
+      };
+      business_questions: {
+        Row: BusinessQuestion;
+      };
+      social_media: {
+        Row: SocialMedia;
+      };
+      app_users: {
+        Row: AppUser;
       };
     };
     Views: SupabaseDatabase['public']['Views'];

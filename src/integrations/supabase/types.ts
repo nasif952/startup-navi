@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          id: string
+          role: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          user_type: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          user_type?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          user_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_model: {
         Row: {
           company_id: string | null
@@ -44,42 +85,101 @@ export type Database = {
           },
         ]
       }
+      business_questions: {
+        Row: {
+          business_model: string | null
+          company_id: string | null
+          created_at: string | null
+          founding_team_gender: string | null
+          id: string
+          problem_solving: string | null
+          solution: string | null
+          updated_at: string | null
+          why_now: string | null
+        }
+        Insert: {
+          business_model?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          founding_team_gender?: string | null
+          id?: string
+          problem_solving?: string | null
+          solution?: string | null
+          updated_at?: string | null
+          why_now?: string | null
+        }
+        Update: {
+          business_model?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          founding_team_gender?: string | null
+          id?: string
+          problem_solving?: string | null
+          solution?: string | null
+          updated_at?: string | null
+          why_now?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_questions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           business_activity: string | null
+          company_series: string | null
+          country: string | null
           created_at: string | null
+          currency: string | null
           founded_year: number | null
           id: string
           industry: string | null
           last_revenue: number | null
           name: string
+          sector: string | null
           stage: string | null
           total_employees: number | null
           updated_at: string | null
+          website_url: string | null
         }
         Insert: {
           business_activity?: string | null
+          company_series?: string | null
+          country?: string | null
           created_at?: string | null
+          currency?: string | null
           founded_year?: number | null
           id?: string
           industry?: string | null
           last_revenue?: number | null
           name?: string
+          sector?: string | null
           stage?: string | null
           total_employees?: number | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Update: {
           business_activity?: string | null
+          company_series?: string | null
+          country?: string | null
           created_at?: string | null
+          currency?: string | null
           founded_year?: number | null
           id?: string
           industry?: string | null
           last_revenue?: number | null
           name?: string
+          sector?: string | null
           stage?: string | null
           total_employees?: number | null
           updated_at?: string | null
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -497,23 +597,35 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          country_code: string | null
           created_at: string | null
+          designation: string | null
           full_name: string | null
           id: string
+          last_name: string | null
+          phone: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          country_code?: string | null
           created_at?: string | null
+          designation?: string | null
           full_name?: string | null
           id: string
+          last_name?: string | null
+          phone?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          country_code?: string | null
           created_at?: string | null
+          designation?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
+          phone?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -688,6 +800,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      social_media: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          crunchbase: string | null
+          id: string
+          instagram: string | null
+          linkedin: string | null
+          twitter: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          crunchbase?: string | null
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          twitter?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          crunchbase?: string | null
+          id?: string
+          instagram?: string | null
+          linkedin?: string | null
+          twitter?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_media_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       startup_scores: {
         Row: {
