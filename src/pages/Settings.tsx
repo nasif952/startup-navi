@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { ProfileSection } from "@/components/settings/ProfileSection";
+import { Company, BusinessQuestion, SocialMedia, AppUser, Profile } from "@/integrations/supabase/client-extension";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -14,6 +15,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState("company-details");
   const [activeSettingsTab, setActiveSettingsTab] = useState("profile-details");
 
+  // Fetch company data
   const { data: companyData, isLoading: isCompanyLoading } = useQuery({
     queryKey: ['company-settings'],
     queryFn: async () => {
@@ -32,11 +34,12 @@ export default function Settings() {
         return null;
       }
       
-      return data;
+      return data as Company;
     }
   });
 
-  const { data: profileData } = useQuery({
+  // Fetch profile data
+  const { data: profileData } = useQuery<Profile | null>({
     queryKey: ['profile-settings'],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -56,12 +59,13 @@ export default function Settings() {
         return null;
       }
       
-      return data;
+      return data as Profile;
     },
     enabled: !!user?.id
   });
 
-  const { data: questionsData } = useQuery({
+  // Fetch business questions data
+  const { data: questionsData } = useQuery<BusinessQuestion | null>({
     queryKey: ['business-questions'],
     queryFn: async () => {
       if (!companyData?.id) return null;
@@ -81,12 +85,13 @@ export default function Settings() {
         return null;
       }
       
-      return data;
+      return data as BusinessQuestion;
     },
     enabled: !!companyData?.id
   });
 
-  const { data: socialMediaData } = useQuery({
+  // Fetch social media data
+  const { data: socialMediaData } = useQuery<SocialMedia | null>({
     queryKey: ['social-media'],
     queryFn: async () => {
       if (!companyData?.id) return null;
@@ -106,12 +111,13 @@ export default function Settings() {
         return null;
       }
       
-      return data;
+      return data as SocialMedia;
     },
     enabled: !!companyData?.id
   });
 
-  const { data: appUsersData } = useQuery({
+  // Fetch app users data
+  const { data: appUsersData } = useQuery<any[]>({
     queryKey: ['app-users'],
     queryFn: async () => {
       if (!companyData?.id) return [];
@@ -120,10 +126,10 @@ export default function Settings() {
         .from('app_users')
         .select(`
           id,
+          user_id,
           user_type,
           status,
           role,
-          user_id,
           profiles:user_id (
             full_name,
             last_name,

@@ -49,6 +49,36 @@ export interface SocialMedia {
   updated_at?: string | null;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  business_activity?: string | null;
+  industry?: string | null;
+  last_revenue?: number | null;
+  stage?: string | null;
+  total_employees?: number | null;
+  founded_year?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  website_url?: string | null;
+  country?: string | null;
+  currency?: string | null;
+  sector?: string | null;
+  company_series?: string | null;
+}
+
+export interface Profile {
+  id: string;
+  full_name?: string | null;
+  last_name?: string | null;
+  avatar_url?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+  country_code?: string | null;
+}
+
 export interface AppUser {
   id: string;
   user_id: string;
@@ -85,6 +115,12 @@ export interface Database extends SupabaseDatabase {
       };
       app_users: {
         Row: AppUser;
+      };
+      companies: {
+        Row: Company;
+      };
+      profiles: {
+        Row: Profile;
       };
     };
     Views: SupabaseDatabase['public']['Views'];

@@ -12,6 +12,7 @@ import { useMutation } from "@tanstack/react-query";
 import { extendedSupabase } from "@/integrations/supabase/client-extension";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Profile } from "@/integrations/supabase/client-extension";
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
@@ -23,7 +24,7 @@ const profileSchema = z.object({
 });
 
 interface ProfileSectionProps {
-  profileData: any;
+  profileData: Profile | null;
 }
 
 export function ProfileSection({ profileData }: ProfileSectionProps) {
