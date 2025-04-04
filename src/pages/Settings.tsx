@@ -120,7 +120,7 @@ export default function Settings() {
     enabled: !!companyData?.id
   });
 
-  // Fetch app users data
+  // Fetch app users data - Fixed query structure
   const { data: appUsersData } = useQuery<any[]>({
     queryKey: ['app-users'],
     queryFn: async () => {
@@ -137,9 +137,7 @@ export default function Settings() {
           profiles:user_id (
             full_name,
             last_name,
-            email:id (
-              email
-            )
+            email
           )
         `)
         .eq('company_id', companyData.id);
@@ -153,13 +151,14 @@ export default function Settings() {
         return [];
       }
       
+      // Map the data to the format expected by the UsersSection component
       return data.map(user => ({
         id: user.id,
         user: user.profiles?.full_name || 'Unknown',
         user_type: user.user_type,
         status: user.status,
         role: user.role,
-        email: user.profiles?.email?.email || 'N/A',
+        email: user.profiles?.email || 'N/A',
       }));
     },
     enabled: !!companyData?.id
