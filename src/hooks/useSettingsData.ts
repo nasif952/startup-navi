@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { extendedSupabase } from "@/integrations/supabase/client-extension";
 import { useToast } from "@/hooks/use-toast";
-import { Company, BusinessQuestion, SocialMedia, Profile } from "@/integrations/supabase/client-extension";
+import { Company, BusinessQuestion, SocialMedia, Profile, AppUser } from "@/integrations/supabase/client-extension";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useSettingsData() {
@@ -141,14 +141,14 @@ export function useSettingsData() {
         return [];
       }
       
-      // Fix: properly map the data from profiles nested object
+      // Fix: properly map the data from the profiles nested object
       return data.map(user => ({
         id: user.id,
-        user: user.profiles?.full_name || 'Unknown',
+        user: user.profiles ? user.profiles.full_name || 'Unknown' : 'Unknown',
         user_type: user.user_type,
         status: user.status,
         role: user.role,
-        email: user.profiles?.email || 'N/A',
+        email: user.profiles ? user.profiles.email || 'N/A' : 'N/A',
       }));
     },
     enabled: !!companyData?.id
